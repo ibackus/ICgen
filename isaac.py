@@ -8,7 +8,7 @@ SimArray = pynbody.array.SimArray
 pb = pynbody
 
 import copy
-import matplotlib
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.interpolate as interp
@@ -22,6 +22,101 @@ import logging
 self_dir = os.path.dirname(os.path.realpath(__file__))
 print os.path.realpath(__file__)
 
+def diskbins(f, bins=100, fint=0.95):
+    """
+    A utility that sets up disk bins to include a fraction fint of the particles
+    If bins is the r_edges, then bins is returned
+    
+    **ARGUMENTS**
+    
+    f : simulation snapshot
+    bins : int or array
+        either number of bins or the bin edges to use.  If NOT int, assumed
+        to be bin edges, in which case bins is returned
+    fint : float (from 0 to 1)
+        Fraction of particles to include at the max radius
+        
+    **RETURNS**
+    
+    r_edges : array
+        bin edges to use
+    """
+    
+    if not isinstance(bins, int):
+        
+        return bins
+        
+    if (fint > 1) or (fint < 0):
+        
+        raise ValueError, 'fint must be between 0 and 1'
+        
+    r = f.g['rxy']
+    rSort = np.sort(r)
+    iMax = int(round(len(rSort) * fint)) - 1
+    rMax = rSort[[iMax]]
+    r_edges = np.linspace(0, rMax, bins+1)
+    
+    return r_edges
+
+def gridplot(nrows, ncols=1):
+    """
+    Creates a grid of tightly-packed subplots and returns them as a numpy array,
+    shape (nrows,ncols).  If nrows=ncols=1, a single subplot is made.
+    Currently not fully implemented for a 2D array
+    """
+    # Just make a single subplot
+    if (nrows == 1) & (ncols == 1):
+        
+        return plt.subplot(1,1,1)
+    
+    # Create a grid
+    grid = mpl.gridspec.GridSpec(nrows,ncols)
+    grid.update(wspace=0., hspace=0.)
+    
+    # Initialize subplots
+    ax = np.zeros((nrows,ncols), dtype=object)
+    counter = 0
+    for i in range(nrows):
+        for j in range(ncols):
+            if i > 0:
+                sharex = ax[0,j]
+            else:
+                sharex = None
+            if j > 0:
+                sharey = ax[i,0]
+            else:
+                sharey = None
+                
+            ax[i,j] = plt.subplot(grid[counter], sharex = sharex, sharey = sharey)
+            counter += 1
+    
+    # Remove ticklabels inbetween plots
+    for i in range(nrows-1):
+        for j in range(ncols):
+            plt.setp(ax[i,j].get_xticklabels(), visible=False)
+    for i in range(nrows):
+        for j in range(1,ncols):
+            plt.setp(ax[i,j].get_yticklabels(), visible=False)
+            
+    # If this is a 1-D grid, flatten ax    
+    if (ncols == 1) or (nrows == 1):
+        
+        ax = ax.flatten()
+    
+    return ax
+
+def centerdisk(snapshot):
+    """
+    Centers a disk on the center of mass puts it into rest frame
+    """
+    cm = pynbody.analysis.halo.center_of_mass(snapshot)
+    vel = pynbody.analysis.halo.center_of_mass_velocity(snapshot)
+    
+    snapshot['pos'] -= cm
+    snapshot['vel'] -= vel
+    
+    return
+    
 def snapshot_defaults(snapshot):
     """
     Applies various defaults to tipsy snapshots of protoplanetary disk
@@ -29,6 +124,8 @@ def snapshot_defaults(snapshot):
     
         -Sets nice units
         -Calculates particle smoothing lengths using mass and rho (if available)
+        -Centers on snapshot center-of-mass
+        -Puts in rest frame
     
     Changes the snapshot in place
     """
@@ -48,6 +145,9 @@ def snapshot_defaults(snapshot):
         if ~(np.any(snapshot.g['rho'] == 0)):
             
             snapshot.g['smooth'] = (snapshot.g['mass']/snapshot.g['rho'])**(1,3)
+    
+    # Center the disk
+    centerdisk(snapshot)
     
     return
 
@@ -386,49 +486,6 @@ def sigma(snapshot, bins=100):
     return sig, r_bins
     
     
-def Q2(snapshot, molecular_mass = 2.0, bins=100, max_height=None):
-    
-    # Physical constants
-    kB = SimArray([1.0],'k')
-    G = SimArray([1.0],'G')
-    # Load stuff froms snapshot
-    v = snapshot.g['vt']
-    r = snapshot.g['rxy']
-    z = snapshot.g['z']
-    T = snapshot.g['temp']
-    # Calculate sound speed for all particles
-    m = match_units(molecular_mass,'m_p')[0]
-    cs = np.sqrt(kB*T/m)
-    # Calculate surface density
-    sig_binned, r_edges = sigma(snapshot, bins)
-    r_cent = (r_edges[1:]+r_edges[0:-1])/2
-    sig_spl = extrap1d(r_cent, sig_binned)
-    sig = SimArray(sig_spl(r), sig_binned.units)
-    # Calculate omega (as a proxy for kappa)
-    omega = v/r
-    kappa = omega
-    
-    #Calculate Q for all particles
-    print 'kappa',kappa.units
-    print 'cs',cs.units
-    print 'sigma', sig.units
-    Q_all = (kappa*cs/(np.pi*G*sig)).in_units('1')
-    
-    # Use particles close to midplane
-    if max_height is not None:
-        
-        dummy, h = height(snapshot, bins=r_edges)
-        ind = np.digitize(r, r_edges) - 1
-        ind[ind<0] = 0
-        ind[ind >= (len(r_edges)-1)] = len(r_edges)-2
-        mask = abs(z) < (max_height*h[ind])
-        Q_all = Q_all[mask]
-        r = r[mask]
-        
-    dummy, Q_binned, dummy2 = binned_mean(r, Q_all, binedges=r_edges)
-    
-    return r_edges, Q_binned
-    
 def kappa(f, bins=100):
     """
     Estimate the epicyclic frequency from velocity
@@ -455,7 +512,7 @@ def kappa(f, bins=100):
         
         if not np.all(bins[1:] - bins[0:-1] <= dr + 1000*eps):
             
-            raise ValueError, 'Bins not uniformly spaced'
+            warnings.warn('Bins not uniformly spaced')
             
     r = f.g['rxy']
     v = f.g['vt']
@@ -470,8 +527,8 @@ def kappa(f, bins=100):
         
     return kappa, r_edges
     
-def Q(snapshot, molecular_mass = 2.0, bins=100, max_height=None, \
-use_velocity=False, use_omega=True):
+def Q(snapshot, molecular_mass = 2.0, bins=100, use_velocity=False, \
+use_omega=True):
     """
     Calculates the Toomre Q as a function of r, assuming radial temperature
     profile and kappa ~= omega
@@ -536,13 +593,13 @@ use_velocity=False, use_omega=True):
             kappa_calc = p['kappa']
             
     return (kappa_calc*c_s/(np.pi*G*sig)).in_units('1'), r_edges
-    
-def Q_eff(snapshot, molecular_mass=2.0, bins=100):
+
+def Qeff(snapshot, molecular_mass = 2.0, bins=100, use_velocity=False, \
+use_omega=True, alpha=0.18, beta=2.2):
     """
-    Calculates the effective Toomre Q as a function of r, assuming radial temp
-    profile and kappa ~= omega and scaleheight << wavelength.  This assumption
-    simplifies the calculation of Q_eff (where wavelength is the wavelength of
-    the disturbances of interest)
+    Estimates the effective Toomre Q as a function of r, defined as:
+        Qeff = beta * Q * (h/R)^alpha
+    See isaac.Q and isaac.height for the estimates of Q and h
     
     ** ARGUMENTS **
     
@@ -551,39 +608,30 @@ def Q_eff(snapshot, molecular_mass=2.0, bins=100):
         Mean molecular mass (for sound speed).  Default = 2.0
     bins : int or array
         Either the number of bins or the bin edges
+    use_velocity : Bool
+        Determines whether to use the particles' velocities to calculate orbital
+        velocity.  Useful if the circular orbital velocities are set in the
+        snapshot.
+    use_omega : Bool
+        Default=True.  Use omega as a proxy for kappa to reduce noise
+    alpha : float
+        Powerlaw for height dependence
+    beta : float
+        Normalization such that disks fragment for Qeff = 1
         
     ** RETURNS **
     
     Qeff : array
-        Effective Toomre Q as a function of r for scale height << wavelength
+        Effective Toomre Q as a function of r
     r_edges : array
         Radial bin edges
     """
-    # Physical constants
-    kB = SimArray([1.0],'k')
-    G = SimArray([1.0],'G')
-    # Calculate surface density
-    sig, r_edges = sigma(snapshot, bins)
-    # Calculate keplerian angular velocity (as a proxy for the epicyclic
-    # frequency, which is a noisy calculation)
-    p = pynbody.analysis.profile.Profile(snapshot, bins=r_edges)    
-    omega = p['omega']
-    # Calculate sound speed
-    m = match_units(molecular_mass,'m_p')[0]
-    c_s_all = np.sqrt(kB*snapshot.g['temp']/m)
-    # Bin/average sound speed
-    dummy, c_s, dummy2 = binned_mean(snapshot.g['rxy'], c_s_all, binedges=r_edges)    
-    # Calculate scale height
-    dummy, h = height(snapshot, bins=r_edges, center_on_star=False)
+    Qcalc, r_edges = Q(snapshot, molecular_mass, bins, use_velocity, use_omega)
+    dummy, h = height(snapshot, r_edges, center_on_star=False)
+    r = (r_edges[1:] + r_edges[0:-1])/2.
+    Qeff = beta * ((h/r).in_units('1'))**alpha
     
-    a = np.pi*G*sig
-    b = (2*a*h/c_s**2).in_units('1')
-    Q0 = (omega*c_s/a).in_units('1')
-    
-    return Q0 * np.sqrt(1 + b), r_edges
-    
-    return ((omega*c_s/a) * np.sqrt(1 + 2*a*h/c_s**2)).in_units('1'), r_edges
-    
+    return Qeff, r_edges
     
     
 def strip_units(x):
@@ -1251,7 +1299,7 @@ def heatmap(x, y, z, bins=10, plot=True, output=False):
     
     if plot:
         
-        cmap = copy.copy(matplotlib.cm.jet)
+        cmap = copy.copy(mpl.cm.jet)
         cmap.set_bad('w',1.)
         masked_z = np.ma.array(z_binned, mask=np.isnan(z_binned))
         plt.pcolormesh(x_mesh, y_mesh, masked_z, cmap = cmap)
