@@ -683,7 +683,6 @@ def calcStableSigma(r,rd,Mstar,Mdisk,Q):
     Output:
     sigma_0: critical surfance density [Msol/AU^2]
     """    
-    
     sigma_0 = 3.0*(Mstar + Mdisk)/(8.0*np.pi*np.pi*r*r)
     sigma_0 *= np.power(r/rd,3.0)
     sigma_0 *= np.sqrt(1.0 + 4.0*Q*Q*(np.power(rd/r,3.0) - np.power(rd/r,1.5)))
