@@ -56,8 +56,8 @@ def snapshot_gen(ICobj):
     snapshot = pynbody.load(path + snapshotName)
  
     # particle positions
-    r = snapshot['r']
-    xyz = snapshot['pos']
+    r = snapshot.gas['r']
+    xyz = snapshot.gas['pos']
     
     # Number of particles
     nParticles = len(snapshot.gas)
@@ -196,15 +196,6 @@ def snapshot_gen(ICobj):
     snapshotBinary.star[0]['mass'] = SimArray(binsys.m1-m_disk,m_unit)
     snapshotBinary.star[1]['mass'] = SimArray(binsys.m2,m_unit)
     snapshotBinary.star['metals'] = SimArray(star_metals)
- 
-    #Now that everything has masses and positions, adjust positions so the 
-    #system center of mass corresponds to the origin
-    """    
-    com = binaryUtils.computeCOM(snapshotBinary.stars,snapshotBinary.gas)
-    print com
-    snapshotBinary.stars['pos'] -= com
-    snapshotBinary.gas['pos'] -= com   
-    """
  
     print 'Wrapping up'
     # Now set the star particle's tform to a negative number.  This allows
