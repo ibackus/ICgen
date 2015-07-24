@@ -267,7 +267,7 @@ def calcDiskRadialBins(s,r_in=0,r_out=0,bins=50):
 	#Bin gas particles by radius
 	pg = pynbody.analysis.profile.Profile(s.gas,max=r_out,nbins=bins)
 	r = isaac.strip_units(pg['rbins']) #Radius from origin in xy plane
-	mask = (r > r.min()) & (r < r_out) #Ensure you're not right on binary or too far out.  Redundant, but whatever
+	mask = (r > r_in) & (r < r_out) #Ensure you're not right on binary or too far out.  Redundant, but whatever
 	r = r[mask]
 
 	#Make nice, evenly spaced radial bins vector
@@ -550,6 +550,9 @@ def calcEccVsRadius(s,rBinEdges):
 
 	Outputs:
 	ecc: Vector of len = len(r) containing disk eccentricity.
+ 
+     NOTE: 99% sure this is completely wrong --dflemin3 07/23/15
+ 
 	"""
 	ecc = np.zeros(len(rBinEdges)-1)
 
@@ -688,3 +691,58 @@ def calcStableSigma(r,rd,Mstar,Mdisk,Q):
     sigma_0 *= np.sqrt(1.0 + 4.0*Q*Q*(np.power(rd/r,3.0) - np.power(rd/r,1.5)))
     
     return sigma_0
+    
+def orbElemsVsRadius(s,rBinEdges,average=False):
+    """
+    Computes the orbital elements for disk particles about a binary system in given radial bins.
+    Assumes center of mass has v ~ 0
+
+    Parameters
+    ----------
+
+    s: Tipsy snapshot
+    rBinEdges: numpy array
+        Radial bin edges [AU] preferably calculated using binaryUtils.calcDiskRadialBins
+    average: bool
+        True -> average over all particles in bin, false -> randomly select 1 particle in bin
+        
+    Returns
+    -------
+    orbElems: numpy array
+        6 x len(rBinEdges) - 1 containing orbital elements at each radial bin
+        as e, a, i, Omega, w, nu
+    """
+    
+    #Read snapshot and pull out values of interest
+    stars = s.stars
+    gas = s.gas    
+    M = np.sum(stars['mass'])
+    zero = np.zeros(3).reshape((1, 3))
+    orbElems = np.zeros((6,len(rBinEdges)-1))    
+    
+    #Gas orbiting about system center of mass
+    com = computeCOM(stars,gas)
+   
+    #Loop over radial bins calculating orbital elements
+    for i in range(0,len(rBinEdges)-1):
+        if average: #Average over all gas particles in subsection
+            rMask = np.logical_and(isaac.strip_units(gas['rxy']) > rBinEdges[i], isaac.strip_units(gas['rxy']) < rBinEdges[i+1])
+            if i > 0:            
+                mass = M + np.sum(gas[gas['rxy'] < rBinEdges[i]]['mass'])
+            else:
+                mass = M
+            N = len(gas[rMask])
+            g = gas[rMask]
+            orbElems[:,i] = np.sum(AddBinary.calcOrbitalElements(g['pos'],com,g['vel'],zero,mass,g['mass']),axis=-1)/N
+        else: #Randomly select 1 particle in subsection for calculations
+            rMask = np.logical_and(isaac.strip_units(gas['rxy']) > rBinEdges[i], isaac.strip_units(gas['rxy']) < rBinEdges[i+1])
+            if i > 0:            
+                mass = M + np.sum(gas[gas['rxy'] < rBinEdges[i]]['mass'])
+            else:
+                mass = M
+            g = gas[rMask]            
+            index = np.random.randint(0,len(g))
+            particle = g[index]
+            orbElems[:,i] = AddBinary.calcOrbitalElements(com,particle['pos'],zero,particle['vel'],mass,particle['mass'])
+            
+    return orbElems

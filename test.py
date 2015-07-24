@@ -24,7 +24,7 @@ m1 = SimArray(0.949,'Msol')
 m2 = IC.settings.physical.M - m1
 
 #Scale the mass of the disk to be some fraction of the star mass
-IC.settings.snapshot.mScale = 0.1
+IC.settings.snapshot.mScale = 4.0
 
 #Define whether the star is a single star or binary
 IC.settings.physical.starMode = 'binary'
@@ -32,7 +32,7 @@ IC.settings.physical.starMode = 'binary'
 #Set binary system parameters.  If single star, comment this out
 #Define list of orbital elements of the following form:
 #X = [e, a [AU], i, Omega, w, nu] where all angles are in degrees
-X = [0.0, 0.1469, 0.0, 0.0, 0.0, 0.0]
+X = [0.1032, 0.1469, 0.0, 0.0, 0.0, 0.0]
 IC.settings.physical.binsys = binary.Binary(X,m1,m2,'kepler')
 
 # Lets generate a disk with powerlaw from [Rin,Rd] au followed by a cutoff
@@ -45,8 +45,8 @@ IC.settings.physical.binsys = binary.Binary(X,m1,m2,'kepler')
 #   n_points : number of radial points to calculate sigma at
 #	power: sigma ~ r^(power)
 IC.settings.sigma.kind = 'powerlaw'
-IC.settings.sigma.power = -0.5
-IC.settings.sigma.Qmin = 1.5
+IC.settings.sigma.power = -1
+IC.settings.sigma.Qmin = 1.0
 IC.settings.sigma.n_points = 500
 
 IC.settings.sigma.Rd = SimArray(2.0,'au') #Outer edge of powerlaw part of disk
@@ -70,9 +70,9 @@ IC.settings.pos_gen.nParticles = 100000
 # and 'MQWS'
 # We'll use something of the form T = T0(r/r0)^Tpower
 IC.settings.physical.kind = 'powerlaw'
-IC.settings.physical.Tpower = -1  # exponent
-IC.settings.physical.T0 = SimArray(750, 'K')  # temperature at r0
-IC.settings.physical.Tmin = SimArray(150.0, 'K') # Minimum temperature
+IC.settings.physical.Tpower = -0.5  # exponent
+IC.settings.physical.T0 = SimArray(300.0, 'K')  # temperature at r0
+IC.settings.physical.Tmin = SimArray(50.0, 'K') # Minimum temperature
 IC.settings.physical.r0 = SimArray(1.0, 'au')
 
 # Lets have changa run on the local preset

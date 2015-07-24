@@ -103,7 +103,7 @@ class Binary(object):
 
     def __repr__(self):
         """
-        When invoked, return the orbital elements.
+        Return the orbital elements and the masses of the primary and secondary.
         """
         return "(%s,%s,%s,%s,%s,%s), mass: (%s,%s)" % (self.e,
                                                        self.a,
@@ -130,7 +130,6 @@ class Binary(object):
         Output:
         None
         """
-        # Only assign data if it doesn't exist
         self.e = float(X[0])
         self.a = float(X[1])
         self.i = float(X[2])

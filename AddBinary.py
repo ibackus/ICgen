@@ -441,8 +441,7 @@ def calcLongOfAscNode(x1=1, x2=0, v1=1, v2=0, flag=True):
     magN = np.linalg.norm(n, axis=ax)
 
     # Ensure no divide by zero errors?
-    if np.fabs(magN) < SMALL:
-        magN = 1.0
+    magN[magN < SMALL] = 1.0
 
     # Compute LoAN
     inc = calcInc(x1, x2, v1, v2)
@@ -452,7 +451,7 @@ def calcLongOfAscNode(x1=1, x2=0, v1=1, v2=0, flag=True):
     Omega[inc < SMALL] = 0.0
 
     # Fix phase due to arccos return range
-    Omega[dotProduct(n, j) < 0] = 2.0 * np.pi - Omega
+    Omega[dotProduct(n, j) < 0] = 2.0 * np.pi - Omega[dotProduct(n, j) < 0]
 
     # Convert to degrees, return
     return Omega * RAD2DEG
@@ -490,10 +489,10 @@ def calcEccVector(x1=1, x2=0, v1=1, v2=0, m1=1, m2=1, flag=True):
 
     # Relative position vector in cgs
     r = (x1 - x2)
-    magR = np.linalg.norm(r, axis=ax)
+    magR = np.linalg.norm(r, axis=ax).reshape(len(r),1)
 
     # Compute standard gravitational parameter in cgs
-    mu = BigG * (m1 + m2)
+    mu = (BigG * (m1 + m2)).reshape(len(r),1)
 
     # Compute relative velocity vector in cgs with appropriate scale
     v = (v1 - v2)
@@ -560,8 +559,7 @@ def calcArgPeri(x1=1, x2=0, v1=1, v2=0, m1=1, m2=1, flag=True):
     magN = np.linalg.norm(n, axis=ax)
 
     # Ensure no divide by zero errors?
-    if np.fabs(magN) < SMALL:
-        magN = 1.0
+    magN[magN < SMALL] = 1.0
 
     # Compute argument of periapsis
     inc = calcInc(x1, x2, v1, v2)
@@ -618,7 +616,7 @@ def calcTrueAnomaly(x1=1, x2=0, v1=1, v2=0, m1=1, m2=1, flag=True):
         if dotProduct(r, v) < 0.0:
             nu = 2.0 * np.pi - nu
     else:
-        nu[dotProduct(r, v) < 0.0] = 2.0 * np.pi - nu
+        nu[dotProduct(r, v) < 0.0] = 2.0 * np.pi - nu[dotProduct(r, v) < 0.0]
 
     # Convert to degrees, return
     return nu * RAD2DEG
