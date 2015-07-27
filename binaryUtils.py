@@ -11,43 +11,6 @@ import isaac
 import pynbody
 from scipy import interpolate
 
-def angMomSearch(name,simUnits=False,flag="AngularMomentum="):
-	"""
-	Given the name of a file containing line dumps from ChaNGa, searches for appropriate angular momentum flag (see default)
-	and tallys up total change in angular momentum
-
-	Input:
-	Name of input file (something.txt)
-	Flag (String to search for; defaults to AngularMomentum=)
-	simUnits (whether or not to put results in terms of sim units; defaults to False so cgs units used)
-
-	Output:
-	Total angular momentum accreted by all sink particles in user-specified units
-		Typically used for binary star sim so I only care about those 2 sinks
-	"""
-
-	#Read in data
-	data = np.genfromtxt(name,dtype="str")
-
-	#Find lines with angular momentum in them with correct format
-	mask = (np.core.defchararray.find(data,flag) > -1)
-	L = data[mask]
- 
-	#Loop over values in array containing angular momentum lines
-	res = 0
-	for i in range(len(L)):
-		res = res + np.asarray(re.findall(r"[+-]? *(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?",L[i])).astype(float)
-
-	#Convert res to cgs if user so wishes (i.e. simUnits == False)
-	#Is read in in units: Msol*(28.something km/s)*AU
-
-	if(simUnits == False):
-		return res*(AddBinary.Msol*AddBinary.AUCM*1000*100*AddBinary.VEL_UNIT)
-	else:
-		return res
-
-#end function
-
 def changaFloatSearch(name,simUnits=False):
 	"""
 	Given the name of a file containing line dumps for ChaNGa and outputs numpy arrays containing changa dumps line-by-line.
@@ -198,39 +161,100 @@ def find_crit_radius(r,array,toFind,num=1000):
 #end function
 
 def computeCOM(stars,gas,cutoff=None,starFlag=True):
-	"""
-	Given pynbody star and gas arrays, compute the center of mass for the entire specified system.
+    """
+    Given pynbody star and gas arrays, compute the center of mass for the entire specified system.
 
-	Inputs: (pynbody objects!)
-	stars: s.stars pynbody object
-	gas: s.gas pynbody object
-	cutoff: radius at which you only consider objects interior to it
-	starFlag: whether or not to consider stars
+    Parameters
+    ----------    
+    stars: s.stars pynbody object
+    gas: s.gas pynbody object
+    cutoff: float
+        radius at which you only consider objects interior to it
+    starFlag: bool
+        whether or not to consider stars
 
-	Output:
-	Center of mass (in AU for each x,y,z component) as numpy array
+    Return
+    -------
+    com: SimArray
+        Center of mass (in AU for each x,y,z component)
+    """
+    com = pynbody.array.SimArray(np.zeros(3),'au')	
+ 
+    #If there's a cutoff, select gas particles with cylindrical radius less than the cutoff
+    if cutoff != None:
+        mask = gas['rxy'] < cutoff
+        gas = gas[mask]
+	
+    if starFlag: #Include stars
+        #Ensure binary
+        assert len(stars) == 2
+	
+        #Compute stellar mass, mass-weighted position
+        starMass = stars[0]['mass'] + stars[1]['mass']
+        starPos = (stars[0]['pos']*stars[0]['mass'] + stars[1]['pos']*stars[1]['mass']).in_units('Msol au')
+	
+        #Compute, return total center of mass
+        com = (starPos + np.sum(gas['pos']*gas[0]['mass'],axis=0)).in_units('Msol au')
+        return (com/np.sum(starMass+np.sum(gas['mass']))).in_units('au')
+    else: #No stars, just gas
+        com = np.sum(gas['pos'])*gas[0]['mass']/np.sum(gas['mass'])
+        return com.in_units('au')
 
-	Note: a lot of "strip_units" commands included to prevent throwing weird value errors.  As long as all masses
-	are in solar masses and positions in AU before this is run, you won't have any problems.	
-	"""
-	#If there's a cutoff, select gas particles with cylindrical radius less than the cutoff
-	if cutoff != None:
-		mask = gas['rxy'] < cutoff
-		gas = gas[mask]
+#end function
+
+def computeVelocityCOM(s,cutoff=None,starFlag=True,gasFlag=True):
+    """
+    Given pynbody star and gas arrays, compute the center of mass velocity
+    for the entire specified system.
+
+    Parameters
+    ----------
+    s: pynbody snapshot
+    cutoff: float
+        radius at which you only consider objects interior to it [AU]
+    starFlag: bool
+        whether or not to consider stars
+    gasFlag: bool
+        whether or not to consider gas
+
+    Returns:
+    -------
+    Center of mass velocity: SimArry
+        in AU for each vx,vy,vz component
+
+    Note: a lot of "strip_units" commands included to prevent throwing weird value errors.  As long as all masses
+    are in solar masses and positions in AU before this is run, you won't have any problems.	
+    """
+    stars = s.stars
+    gas = s.gas
+    
+    com = pynbody.array.SimArray(np.zeros(3),'km s**-1')
+    
+    #If there's a cutoff, select gas particles with cylindrical radius less than the cutoff
+    if cutoff != None:
+        mask = gas['rxy'] < cutoff
+        gas = gas[mask]
 	
-	if starFlag: #Include stars
-		#Ensure binary
-		assert len(stars) == 2
+    if starFlag: #Include stars
+        #Ensure binary
+        assert len(stars) == 2
 	
-		#Compute stellar mass, mass-weighted position
-		starMass = np.sum(stars['mass'])
-		starPos = (stars[0]['pos']*isaac.strip_units(stars[0]['mass']) + stars[1]['pos']*isaac.strip_units(stars[1]['mass']))
+        #Compute stellar mass, mass-weighted position
+        starMass = stars[0]['mass'] + stars[1]['mass']
+        starPos = (stars[0]['vel']*stars[0]['mass'] + stars[1]['vel']*stars[1]['mass']).in_units('Msol km s**-1')
 	
-		#Compute, return total center of mass
-		return np.asarray((starPos + np.sum(gas['pos']*isaac.strip_units(np.mean(gas['mass'])),axis=0))/ \
-                  np.sum(starMass+np.sum(gas['mass'])))
-	else: #No stars, just gas
-		return np.sum(gas['pos']*isaac.strip_units(np.mean(gas['mass'])),axis=0)/np.sum(gas['mass'])
+        if gasFlag:
+            #Compute, return total center of mass
+            com = (starPos + np.sum(gas['vel']*gas[0]['mass'],axis=0)).in_units('Msol km s**-1')
+            com /= starMass + np.sum(gas['mass'])
+            return com.in_units('km s**-1')
+        else:
+            com = (starPos/starMass)
+            return com.in_units('km s**-1')
+          
+    else: #No stars, just gas
+         com = (np.sum(gas['vel']*gas[0]['mass'],axis=0)/np.sum(gas['mass']))
+         return com.in_units('km s**1')
 
 #end function
 
@@ -538,51 +562,6 @@ def findCBResonances(s,r,r_min,r_max,m_max=4,l_max=4,bins=50):
 
 #end function
 
-def calcEccVsRadius(s,rBinEdges):
-	"""
-	Calculates the average circumbinary disk eccentricity in radial bins.
-	Also general enough to work for a circumstellar disk.	
-
-	Inputs:
-	snap: Pynbody snapshot (to get star, gas components)
-	r: array of radial bins to calculate on.
-	bins: Number of bins to calculate on (length of r...included so I don't confuse myself)
-
-	Outputs:
-	ecc: Vector of len = len(r) containing disk eccentricity.
- 
-     NOTE: 99% sure this is completely wrong --dflemin3 07/23/15
- 
-	"""
-	ecc = np.zeros(len(rBinEdges)-1)
-
-	for i in range(0,len(rBinEdges)-1):
-		rMask = np.logical_and(isaac.strip_units(s.gas['rxy']) > rBinEdges[i], isaac.strip_units(s.gas['rxy']) < rBinEdges[i+1])
-		
-		#For non-zero bins
-		if(np.sum(rMask) != 0):
-			x1 = s.gas[rMask]['pos']
-			zero = np.zeros(3)
-			v1 = s.gas[rMask]['vel']
-			m1 = s.stars[0]['mass']
-			
-			#For binary case
-			if(len(s.stars) == 2):
-				m2 = s.stars[1]['mass']
-			else:
-				m2 = 0
-		
-			#Calculate average e
-			ecc[i] = np.sum(AddBinary.calcEcc(x1,zero,v1,zero,m1,m2))/np.sum(rMask)
-		
-		#No gas in bin -> no eccentricity
-		else:
-			ecc[i] = 0
-
-	return ecc
-
-#end function
-
 def calcCoMVsRadius(s,rBinEdges,starFlag=False):
 	"""
 	Calculates the system's center of mass as a function of radius.  At a given radius r, use the total enclosed
@@ -746,3 +725,44 @@ def orbElemsVsRadius(s,rBinEdges,average=False):
             orbElems[:,i] = AddBinary.calcOrbitalElements(com,particle['pos'],zero,particle['vel'],mass,particle['mass'])
             
     return orbElems
+    
+#end function    
+    
+def diskPrecession(s,r):
+    """
+    Computes the precession of the disk due to the binary quadrupole moment.
+    The precessions considered are kappa_r and kappa_z corresponding to the
+    precession of the argument of periapsis and longitude of th ascending node,
+    respectively.
+    
+    Precssion frequency: Omega_p = Omega - Kappa
+    Omega = sqrt((G*mu/r^3)*(1 + 3*alpha/r^2)) == orbital frequency
+    
+    Parameters
+    ----------
+    
+    s: Tipsy snapshot
+    r: numpy array
+        array of radial bins centers in AU
+        
+    Returns:
+    -------
+    
+    Kappa array: numpy array
+        2 x len(rBinEdges)-1 array containing precession at each radial point in 1/s
+    """
+    #Compute relevant frequencies
+    alpha = 0.25
+    mu = ((s.stars[0]['mass'] * s.stars[1]['mass'])/np.sum(s.stars['mass']))*AddBinary.Msol
+    omega = np.sqrt((AddBinary.BigG*mu/np.power(r,3)) * (1.0 + 3.0*alpha/np.power(r,2)))
+    kappa_r = np.sqrt((AddBinary.BigG*mu/np.power(r,3)) * (1.0 - 3.0*alpha/np.power(r,2)))
+    kappa_z = np.sqrt((AddBinary.BigG*mu/np.power(r,3)) * (1.0 + 9.0*alpha/np.power(r,2)))
+    
+    #Compute precession. > 0 -> preccesion, < 0 -> recession
+    omega_p = np.zeros((2,len(r)))
+    omega_p[0,:] = omega - kappa_r
+    omega_p[1,:] = omega - kappa_z
+    
+    return omega_p
+    
+#end function

@@ -71,8 +71,8 @@ IC.settings.pos_gen.nParticles = 100000
 # We'll use something of the form T = T0(r/r0)^Tpower
 IC.settings.physical.kind = 'powerlaw'
 IC.settings.physical.Tpower = -1  # exponent
-IC.settings.physical.T0 = SimArray(750, 'K')  # temperature at r0
-IC.settings.physical.Tmin = SimArray(150.0, 'K') # Minimum temperature
+IC.settings.physical.T0 = SimArray(1.0, 'K') #SimArray(750, 'K')  # temperature at r0
+IC.settings.physical.Tmin = SimArray(0.01, 'K') #SimArray(150.0, 'K') # Minimum temperature
 IC.settings.physical.r0 = SimArray(1.0, 'au')
 
 # Lets have changa run on the local preset
