@@ -266,23 +266,30 @@ def calcDiskRadialBins(s,r_in=0,r_out=0,bins=50):
 	ndim = 2 so all bins are in 2D plane (i.e. radius r is polar/cylindrical radius in xy plane which makes 
 	sense for thin disks)
 
-	Inputs:
+	Parameters
+     ----------
 	s: Pynbody snapshot
-	r_in: Inner disk radius you'll consider (AU)
-	r_out: Outer disk radius you'll consider (AU)
-	bins: # of bins 
+	r_in: float 
+         Inner disk radius you'll consider (AU)
+	r_out: float 
+         Outer disk radius you'll consider (AU)
+	bins: int
+         # of bins 
 
-	Outputs:
-	r: central radial bin values (AU)
-	rBinEdges: edges of radial bins
+	Returns
+     --------
+     r: numpy array 
+         central radial bin values (AU)
+	rBinEdges: numpy array 
+         edges of radial bins
 	"""
 	#Load data, compute semimajor axis and strip units
-	x1 = isaac.strip_units(s.stars[0]['pos'])
-	x2 = isaac.strip_units(s.stars[1]['pos'])
-	v1 = isaac.strip_units(s.stars[0]['vel'])
-	v2 = isaac.strip_units(s.stars[1]['vel'])
-	m1 = isaac.strip_units(s.stars[0]['mass'])
-	m2 = isaac.strip_units(s.stars[1]['mass'])
+	x1 = s.stars[0]['pos']
+	x2 = s.stars[1]['pos']
+	v1 = s.stars[0]['vel']
+	v2 = s.stars[1]['vel']
+	m1 = s.stars[0]['mass']
+	m2 = s.stars[1]['mass']
 	s_a = AddBinary.calcSemi(x1, x2, v1, v2, m1, m2) #Units = au
 
 	#Default r_in, r_out if none given

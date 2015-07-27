@@ -268,7 +268,7 @@ def calcEcc(x1, x2, v1, v2, m1, m2, flag=True):
         Scalar eccentricity of binary system.
     """
     if flag:
-        # Strip units from all inputs
+        #Ensure units are in cgs
         x1 = x1.in_units('cm')
         x2 = x2.in_units('cm')
         v1 = v1.in_units('cm s**-1')
@@ -316,45 +316,61 @@ def calcSemi(x1, x2, v1, v2, m1, m2, flag=True):
     Calculates a using the following: a = -mu/(2*e)
     where mu = G*(m1+m2) and e = (v^2)/2 - (mu/|r|)
 
-    Input: (as pynbody SimArrays!)
-    Primary and secondary position arrays x1, x2 (in AU)
-    Primary and secondary velocity arrays v1, v2 (km/s)
-    Primary and secondary masses (Msol)
-    Flag: Whether or not to internally convert to cgs units
+    Parameters
+    ----------
+    (as pynbody SimArrays!)
+    
+    x1,x2: SimArrays
+        Primary and secondary position arrays [AU]
+    v1,v2: SimArrays
+        Primary and secondary velocity arrays [km/s]
+    m1,m2: SimArrays
+        Primary and secondary masses [Msol]
+    Flag: bool
+        Whether or not to internally convert to cgs units
 
-    Output:
-    a: semimajor axis of binary orbit in AU
+    Returns
+    -------
+    a: float
+        semimajor axis of binary orbit in AU
 
     Edits:
     dflemin3 added support to calculate a over arrays and not just 1 value 3/3/2015
     """
     if flag:
+        #Ensure units are in cgs
+        x1 = x1.in_units('cm')
+        x2 = x2.in_units('cm')
+        v1 = v1.in_units('cm s**-1')
+        v2 = v2.in_units('cm s**-1')
+        m1 = m1.in_units('g')
+        m2 = m2.in_units('g')
         # Remove units since input is pynbody SimArray
-        x1 = np.asarray(isaac.strip_units(x1)) * AUCM
-        x2 = np.asarray(isaac.strip_units(x2)) * AUCM
-        v1 = np.asarray(isaac.strip_units(v1)) * 1000 * 100 * VEL_UNIT
-        v2 = np.asarray(isaac.strip_units(v2)) * 1000 * 100 * VEL_UNIT
-        m1 = np.asarray(isaac.strip_units(m1)) * Msol
-        m2 = np.asarray(isaac.strip_units(m2)) * Msol
+        #x1 = np.asarray(isaac.strip_units(x1)) * AUCM
+        #x2 = np.asarray(isaac.strip_units(x2)) * AUCM
+        #v1 = np.asarray(isaac.strip_units(v1)) * 1000 * 100 * VEL_UNIT
+        #v2 = np.asarray(isaac.strip_units(v2)) * 1000 * 100 * VEL_UNIT
+        #m1 = np.asarray(isaac.strip_units(m1)) * Msol
+        #m2 = np.asarray(isaac.strip_units(m2)) * Msol
 
     length, ax = computeLenAx(x1)
 
     # Relative position vector in cgs
     r = (x1 - x2)
-    magR = np.linalg.norm(r, axis=ax)
+    magR = SimArray(np.linalg.norm(r, axis=ax),'cm')
 
     # Compute standard gravitational parameter in cgs
-    mu = BigG * (m1 + m2)
+    mu = (G * (m1 + m2))
 
     # Compute relative velocity vector in cgs with appropriate scale
     v = (v1 - v2)
-    magV = np.linalg.norm(v, axis=ax)
+    magV = SimArray(np.linalg.norm(v, axis=ax),'cm s**-1')
 
     # Compute specific orbital energy
     eps = (magV * magV / 2.0) - (mu / magR)
 
     # Compute, return semimajor axis in AU (convert from cgs->AU)
-    return -mu / (2.0 * eps) / (AUCM)
+    return (-mu / (2.0 * eps)).in_units('au') #/ (AUCM)
 
 # end function
 
@@ -1001,7 +1017,7 @@ def calcCircularFrequency(x1, x2, v1, v2, m1, m2, flag=True):
     omega: Circular frequency in 1/days
     """
     e = calcEcc(x1, x2, v1, v2, m1, m2, flag=True)
-    
+    a = calcSemi(x1, x2, v1, v2, m1, m2, flag=True) * AUCM
     
     if flag:
         # Remove units since input is pynbody SimArray
@@ -1017,7 +1033,8 @@ def calcCircularFrequency(x1, x2, v1, v2, m1, m2, flag=True):
     # Calculate angular momentum assuming all arrays are nx3
     r = x1 - x2
     rMag = np.sqrt(dotProduct(r, r))
-    a = calcSemi(x1, x2, v1, v2, m1, m2, flag=False) * AUCM
+    #e = ...    
+    #a = calcSemi(x1, x2, v1, v2, m1, m2, flag=False) * AUCM
     L = np.sqrt(BigG * (m1 + m2) * a * (1 - e * e))
 
     # Convert from 1/s to 1/day, return
