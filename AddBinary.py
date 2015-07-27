@@ -30,10 +30,13 @@ from scipy import optimize
 import sys
 sys.path.append('/astro/users/dflemin3/Desktop/ICgen')
 import isaac
+import pynbody
+SimArray = pynbody.array.SimArray
 
 # Units/Constants
 Msol = 1.98855e33  # g/Solar mass
 BigG = 6.67259e-8  # in cgs
+G = SimArray(6.673e-8,'cm**3 g**-1 s**-2')
 YEARSEC = 3.15569e7  # seconds per year
 DAYSEC = 86400  # seconds per day
 AUCM = 1.49597571e13  # cm/au
@@ -196,25 +199,34 @@ def calcCriticalRadius(a=1, e=0, m1=0.5, m2=0.5):
 ##########################################################################
 
 
-def calcOrbitalElements(x1=1, x2=0, v1=1, v2=0, m1=1, m2=1):
+def calcOrbitalElements(x1, x2, v1, v2, m1, m2):
     """
     Given as pynbody SimArrays the cental mass(es), the coodinate(s) and velocity(ies) of a CCW orbiting object,
     return the following orbital elements: eccentricity, semimajor axis, inclination, longitude of ascending node,
     argument of periapsis, and true anomaly.  This function is designed to work for a binary star system but is
     general enough to also work for a ~massless gas particle orbiting around a central quasi-Keplerian mass.
 
-    Input: All input assumed to be in simulation units and are converted to desired units internally.
+    Parameters
+    ----------
+    All input assumed to be in simulation units and are converted to desired units internally.
     x1,x2: position arrays in AU (x2 = 0 for gas particle case)
     v1,v2: velocity arrays in km/s (v2 = 0 for gas particle case)
     m1,m2: Central masses in Msol
 
-    Output: (as numpy arrays)
-    e: Eccentricity (unitless)
-    a: Semimajor Axis in Au
-    i: Inclination in degrees
-    Omega: Longitude of Ascending node in degrees
-    w: Argument of Periapsis in degrees
-    nu: True Anomaly in degrees
+    Returns
+    -------
+    e: float 
+        Eccentricity (unitless)
+    a: float
+        Semimajor Axis in Au
+    i: float
+        Inclination in degrees
+    Omega: float
+        Longitude of Ascending node in degrees
+    w: float
+        Argument of Periapsis in degrees
+    nu: float 
+        True Anomaly in degrees
     """
     # Compute elements.  All unit conversion/processing done in sub functions
     e = calcEcc(x1, x2, v1, v2, m1, m2)
@@ -237,47 +249,61 @@ def calcEcc(x1, x2, v1, v2, m1, m2, flag=True):
     Calculates e using following: e = sqrt(1 + (2*e*h^2)/(mu^2)
     for h = r x v, mu = G*(m1+m2), e = (v^2)/2 - (mu/|r|)
 
-    Input:
+    Parameters
+    ----------
     All inputs expected to be pynbody simArrays!!!
-    Masses of primary and secondary m1, m2 (in Msol)
-    Position arrays of primary and secondary x1, x2 (in AU)
-    Velocity arrays of primary and secondary v1, v2 (in km/s)
-    Flag: Whether or not to internally convert to cgs units
+    
+    x1, x2: SimArrays
+        Position arrays of primary and secondary x1, x2 (in AU)
+    v1, v2: SimArrays
+        Velocity arrays of primary and secondary v1, v2 (in km/s)
+    m1, m2: SimArrays
+        Masses of primary and secondary m1, m2 (in Msol)
+    Flag: bool 
+        Whether or not to internally convert to cgs units
 
-    Output:
-    Scalar eccentricity of binary system.
+    Returns
+    -------
+    e: float
+        Scalar eccentricity of binary system.
     """
     if flag:
         # Strip units from all inputs
-        x1 = np.asarray(isaac.strip_units(x1)) * AUCM
-        x2 = np.asarray(isaac.strip_units(x2)) * AUCM
-        v1 = np.asarray(isaac.strip_units(v1)) * 1000 * 100 * VEL_UNIT
-        v2 = np.asarray(isaac.strip_units(v2)) * 1000 * 100 * VEL_UNIT
-        m1 = np.asarray(isaac.strip_units(m1)) * Msol
-        m2 = np.asarray(isaac.strip_units(m2)) * Msol
+        x1 = x1.in_units('cm')
+        x2 = x2.in_units('cm')
+        v1 = v1.in_units('cm s**-1')
+        v2 = v2.in_units('cm s**-1')
+        m1 = m1.in_units('g')
+        m2 = m2.in_units('g')
+        #x1 = np.asarray(isaac.strip_units(x1)) * AUCM
+        #x2 = np.asarray(isaac.strip_units(x2)) * AUCM
+        #v1 = np.asarray(isaac.strip_units(v1)) * 1000 * 100 * VEL_UNIT
+        #v2 = np.asarray(isaac.strip_units(v2)) * 1000 * 100 * VEL_UNIT
+        #m1 = np.asarray(isaac.strip_units(m1)) * Msol
+        #m2 = np.asarray(isaac.strip_units(m2)) * Msol
 
     length, ax = computeLenAx(x1)
 
     # Relative position vector in cgs
     r = (x1 - x2)
-    magR = np.linalg.norm(r, axis=ax)
-
+    magR = SimArray(np.linalg.norm(r, axis=ax),'cm')
+    
     # Compute standard gravitational parameter in cgs
-    mu = BigG * (m1 + m2)
+    mu = (G * (m1 + m2)).in_units('cm**3 s**-2')
 
     # Compute relative velocity vector in cgs with appropriate scale
     v = (v1 - v2)
-    magV = np.linalg.norm(v, axis=ax)
-
+    magV = SimArray(np.linalg.norm(v, axis=ax),'cm s**-1')
+    
     # Compute specific orbital energy
-    eps = (magV * magV / 2.0) - (mu / magR)
+    eps = ((magV * magV / 2.0) - (mu / magR)).in_units('cm**2 s**-2')
 
     # Compute specific angular momentum vector
-    h = np.cross(r, v, axis=ax)
-    magH = np.linalg.norm(h, axis=ax)
+    h = SimArray(np.cross(r, v, axis=ax),'cm**2 s**-1')
+    magH = SimArray(np.linalg.norm(h, axis=ax),'cm**2 s**-1')
 
     # Compute, return eccentricity
-    return np.sqrt(1 + ((2 * eps * magH * magH) / (mu * mu)))
+    return np.sqrt(1.0 + ((2.0 * eps * magH * magH) / (mu * mu)))
 
 # end function
 
@@ -974,6 +1000,9 @@ def calcCircularFrequency(x1, x2, v1, v2, m1, m2, flag=True):
     Output:
     omega: Circular frequency in 1/days
     """
+    e = calcEcc(x1, x2, v1, v2, m1, m2, flag=True)
+    
+    
     if flag:
         # Remove units since input is pynbody SimArray
         x1 = np.asarray(isaac.strip_units(x1)) * AUCM
@@ -988,7 +1017,6 @@ def calcCircularFrequency(x1, x2, v1, v2, m1, m2, flag=True):
     # Calculate angular momentum assuming all arrays are nx3
     r = x1 - x2
     rMag = np.sqrt(dotProduct(r, r))
-    e = calcEcc(x1, x2, v1, v2, m1, m2, flag=False)
     a = calcSemi(x1, x2, v1, v2, m1, m2, flag=False) * AUCM
     L = np.sqrt(BigG * (m1 + m2) * a * (1 - e * e))
 

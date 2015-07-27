@@ -9,7 +9,8 @@ import numpy as np
 # Import my binary star module that continue relevant routines
 import AddBinary
 import isaac
-
+import pynbody
+SimArray = pynbody.array.SimArray
 
 class Binary(object):
 
@@ -145,8 +146,8 @@ class Binary(object):
         This is useful because sometimes they come in as a list, a (1,3) numpy array or a (3,) numpy array.
         Much easier to clean up upon initialization then have many checks in later functions.
         """
-        self.r = np.asarray(self.r).reshape((1, 3))
-        self.v = np.asarray(self.v).reshape((1, 3))
+        self.r = self.r.reshape((1, 3))
+        self.v = self.v.reshape((1, 3))
 
     # end function
 
@@ -160,12 +161,13 @@ class Binary(object):
         """
         # Compute orbital elements from binary center of mass frame Cartesian
         # coordinates
-        zero = np.asarray([0, 0, 0])
+        zeroR = SimArray([[0.0, 0.0, 0.0]],'cm')
+        zeroV = SimArray([[0.0, 0.0, 0.0]],'cm s**-1')
         oe = AddBinary.calcOrbitalElements(
             self.r,
-            zero,
+            zeroR,
             self.v,
-            zero,
+            zeroV,
             self.m1,
             self.m2)
 

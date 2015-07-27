@@ -10,6 +10,8 @@ import AddBinary
 import isaac
 import pynbody
 from scipy import interpolate
+SimArray = pynbody.array.SimArray
+
 
 def changaFloatSearch(name,simUnits=False):
 	"""
@@ -696,7 +698,7 @@ def orbElemsVsRadius(s,rBinEdges,average=False):
     stars = s.stars
     gas = s.gas    
     M = np.sum(stars['mass'])
-    zero = np.zeros(3).reshape((1, 3))
+    zero = SimArray(np.zeros(3).reshape((1, 3)),'cm s**-1') 
     orbElems = np.zeros((6,len(rBinEdges)-1))    
     
     #Gas orbiting about system center of mass
