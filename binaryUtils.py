@@ -508,66 +508,73 @@ def estimateCBResonances(s,r_max,m_max=5,l_max=5,bins=2500):
 #end function
 
 def findCBResonances(s,r,r_min,r_max,m_max=4,l_max=4,bins=50):
-	"""
-	Given Tipsy snapshot, computes the resonances of disk on binary as a function of orbital angular frequency omega.
-	Disk radius, in au, is convered to angular frequency which will then be used to compute corotation 
-	and inner/outer Lindblad resonances.
+    """
+    Given Tipsy snapshot, computes the resonances of disk on binary as a function of orbital angular frequency omega.
+    Disk radius, in au, is convered to angular frequency which will then be used to compute corotation 
+    and inner/outer Lindblad resonances.
    
-	Note: r given MUST correspond to r over which de/dt was calculated.  Otherwise, scale gets all messed up
+   Note: r given MUST correspond to r over which de/dt was calculated.  Otherwise, scale gets all messed up
  
-	Inputs:
-	s: Tipsy-format snapshot
-	r: radius array over which de/dt was calculated
-	r_min,r_max: ,min/maximum disk radius for calculations (au)
-	bins: number of radial bins to calculate over
-	m_max,l_max: maximum orders of (m,l) LR
+     Inputs:
+     s: Tipsy-format snapshot
+     r: radius array over which de/dt was calculated
+     r_min,r_max: ,min/maximum disk radius for calculations (au)
+     bins: number of radial bins to calculate over
+     m_max,l_max: maximum orders of (m,l) LR
 
-	Output:
-	Orbital frequency for corotation and inner/outer resonances and radii as float and numpy arrays
-	"""
-	stars = s.stars
-	#gas = s.gas
+    Output:
+    Orbital frequency for corotation and inner/outer resonances and radii as float and numpy arrays
+    """
+    stars = s.stars
+    #gas = s.gas
 
-	m_min = 1 #m >=1 for LRs, CRs
-	l_min = 1 #l >=1 for LRs, CRs
+    m_min = 1 #m >=1 for LRs, CRs
+    l_min = 1 #l >=1 for LRs, CRs
 
-	#Compute binary angular frequency
-	#Strip units from all inputs
-	x1 = np.asarray(isaac.strip_units(stars[0]['pos']))
-	x2 = np.asarray(isaac.strip_units(stars[1]['pos']))
-	v1 = np.asarray(isaac.strip_units(stars[0]['vel']))
-	v2 = np.asarray(isaac.strip_units(stars[1]['vel']))
-	m1 = np.asarray(isaac.strip_units(stars[0]['mass']))
-	m2 = np.asarray(isaac.strip_units(stars[1]['mass']))
-	a = AddBinary.calcSemi(x1, x2, v1, v2, m1, m2)
-	omega_b = 2.0*np.pi/AddBinary.aToP(a,m1+m2) #In units 1/day
+    #Compute binary angular frequency
+    #Strip units from all inputs
+    #x1 = np.asarray(isaac.strip_units(stars[0]['pos']))
+    #x2 = np.asarray(isaac.strip_units(stars[1]['pos']))
+    #v1 = np.asarray(isaac.strip_units(stars[0]['vel']))
+    #v2 = np.asarray(isaac.strip_units(stars[1]['vel']))
+    #m1 = np.asarray(isaac.strip_units(stars[0]['mass']))
+    #m2 = np.asarray(isaac.strip_units(stars[1]['mass']))
+    x1 = stars[0]['pos']
+    x2 = stars[1]['pos']
+    v1 = stars[0]['vel']
+    v2 = stars[1]['vel']
+    m1 = stars[0]['mass']
+    m2 = stars[1]['mass']
+     
+    a = isaac.strip_units(AddBinary.calcSemi(x1, x2, v1, v2, m1, m2))
+    omega_b = 2.0*np.pi/AddBinary.aToP(a,m1+m2) #In units 1/day
 
-	#Compute omega_disk in units 1/day (like omega_binary)
-	omega_d = 2.0*np.pi/AddBinary.aToP(r,m1+m2)
+    #Compute omega_disk in units 1/day (like omega_binary)
+    omega_d = 2.0*np.pi/AddBinary.aToP(r,m1+m2)
         
-	#Compute kappa (radial epicycle frequency = sqrt(r * d(omega^2)/dr + 4*(omega^2))
-	o2 = omega_d*omega_d
-	dr = (r.max()-r.min())/float(bins) #Assuming r has evenly spaced bins!
-	drdo2 = np.gradient(o2,dr) #I mean d/dr(omega^2)
-	kappa = np.sqrt(r*drdo2 + 4.0*o2)
+    #Compute kappa (radial epicycle frequency = sqrt(r * d(omega^2)/dr + 4*(omega^2))
+    o2 = omega_d*omega_d
+    dr = (r.max()-r.min())/float(bins) #Assuming r has evenly spaced bins!
+    drdo2 = np.gradient(o2,dr) #I mean d/dr(omega^2)
+    kappa = np.sqrt(r*drdo2 + 4.0*o2)
    
-	#Allocate arrays for output 
-	omega_Lo = np.zeros((m_max,l_max))
-	omega_Li = np.zeros((m_max,l_max))
-	o_c = np.zeros(l_max)   
+    #Allocate arrays for output 
+    omega_Lo = np.zeros((m_max,l_max))
+    omega_Li = np.zeros((m_max,l_max))
+    o_c = np.zeros(l_max)   
  
-	#Find resonance angular frequency
-	for m in range(m_min,m_max+1):
-		for l in range(l_min,l_max+1):
-			outer = omega_d + (float(l)/m)*kappa
-			inner = omega_d - (float(l)/m)*kappa
-			omega_Lo[m-m_min,l-l_min] = omega_d[np.argmin(np.fabs(omega_b-outer))]
-			omega_Li[m-m_min,l-l_min] = omega_d[np.argmin(np.fabs(omega_b-inner))]
+    #Find resonance angular frequency
+    for m in range(m_min,m_max+1):
+        for l in range(l_min,l_max+1):
+            outer = omega_d + (float(l)/m)*kappa
+            inner = omega_d - (float(l)/m)*kappa
+            omega_Lo[m-m_min,l-l_min] = omega_d[np.argmin(np.fabs(omega_b-outer))]
+            omega_Li[m-m_min,l-l_min] = omega_d[np.argmin(np.fabs(omega_b-inner))]
 
-			#Find corotation resonance where omega_d ~ omega_b
-			o_c[l-l_min] = omega_d[np.argmin(np.fabs(omega_d-omega_b/float(l)))]
+            #Find corotation resonance where omega_d ~ omega_b
+            o_c[l-l_min] = omega_d[np.argmin(np.fabs(omega_d-omega_b/float(l)))]
 
-	return omega_Li, omega_Lo, o_c, omega_d, kappa
+    return omega_Li, omega_Lo, o_c, omega_d, kappa
 
 #end function
 

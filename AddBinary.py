@@ -382,20 +382,33 @@ def calcInc(x1=1, x2=0, v1=1, v2=0, flag=True):
 
     i = arccos(h_z/|h|)
 
-    Input: (as pynbody SimArrays in simulation units (au, scaled km/s, etc))
-    Primary and secondary position arrays x1, x2 (in AU)
-    Primary and secondary velocity arrays v1, v2 (km/s)
-    Flag: Whether or not to internally convert to cgs units
+    Parameters
+    ----------
+    as pynbody SimArrays [preferred units]
+    
+    x1,x2: SimArrays
+        Primary and secondary position arrays [AU]
+    v1, v2: SimArrays
+        Primary and secondary velocity arrays [km/s]
+    Flag: bool
+        Whether or not to internally convert to cgs units
 
-    Output:
-    Inclination in degrees
+    Returns
+    -------
+    i: float
+        Inclination in degrees
     """
     if flag:
+        #Ensure units are in cgs
+        x1 = x1.in_units('cm')
+        x2 = x2.in_units('cm')
+        v1 = v1.in_units('cm s**-1')
+        v2 = v2.in_units('cm s**-1')
         # Strip units from all inputs
-        x1 = np.asarray(isaac.strip_units(x1)) * AUCM
-        x2 = np.asarray(isaac.strip_units(x2)) * AUCM
-        v1 = np.asarray(isaac.strip_units(v1)) * 1000 * 100 * VEL_UNIT
-        v2 = np.asarray(isaac.strip_units(v2)) * 1000 * 100 * VEL_UNIT
+        #x1 = np.asarray(isaac.strip_units(x1)) * AUCM
+        #x2 = np.asarray(isaac.strip_units(x2)) * AUCM
+        #v1 = np.asarray(isaac.strip_units(v1)) * 1000 * 100 * VEL_UNIT
+        #v2 = np.asarray(isaac.strip_units(v2)) * 1000 * 100 * VEL_UNIT
 
     # Compute length of array we're dealing with
     length, ax = computeLenAx(x1)
@@ -408,7 +421,7 @@ def calcInc(x1=1, x2=0, v1=1, v2=0, flag=True):
 
     # Compute specific angular momentum vector
     h = np.cross(r, v, axis=ax)
-    magH = np.linalg.norm(h, axis=ax)
+    magH = SimArray(np.linalg.norm(h, axis=ax),'cm**2 s**-1')
 
     if(length > 1):
         h_z = h[:, 2]
@@ -445,11 +458,16 @@ def calcLongOfAscNode(x1=1, x2=0, v1=1, v2=0, flag=True):
     Omega: longitude of the ascending node in degrees
     """
     if flag:
+        #Ensure units are in cgs
+        x1 = x1.in_units('cm')
+        x2 = x2.in_units('cm')
+        v1 = v1.in_units('cm s**-1')
+        v2 = v2.in_units('cm s**-1')
         # Strip units from all inputs and convert to cgs
-        x1 = np.asarray(isaac.strip_units(x1)) * AUCM
-        x2 = np.asarray(isaac.strip_units(x2)) * AUCM
-        v1 = np.asarray(isaac.strip_units(v1)) * 1000 * 100 * VEL_UNIT
-        v2 = np.asarray(isaac.strip_units(v2)) * 1000 * 100 * VEL_UNIT
+        #x1 = np.asarray(isaac.strip_units(x1)) * AUCM
+        #x2 = np.asarray(isaac.strip_units(x2)) * AUCM
+        #v1 = np.asarray(isaac.strip_units(v1)) * 1000 * 100 * VEL_UNIT
+        #v2 = np.asarray(isaac.strip_units(v2)) * 1000 * 100 * VEL_UNIT
 
     # Define unit vectors pointing along z, x and y axes respectively
     # Also ensure function can handle any number of values
@@ -480,7 +498,7 @@ def calcLongOfAscNode(x1=1, x2=0, v1=1, v2=0, flag=True):
 
     # Compute vector pointing to ascending node
     n = np.cross(k, h, axis=ax)
-    magN = np.linalg.norm(n, axis=ax)
+    magN = SimArray(np.linalg.norm(n, axis=ax),'cm**2 s**-1')
 
     # Ensure no divide by zero errors?
     magN[magN < SMALL] = 1.0
@@ -518,32 +536,39 @@ def calcEccVector(x1=1, x2=0, v1=1, v2=0, m1=1, m2=1, flag=True):
     Ecc: Eccentricity vector in cgs
     """
     if flag:
+        #Ensure units are in cgs
+        x1 = x1.in_units('cm')
+        x2 = x2.in_units('cm')
+        v1 = v1.in_units('cm s**-1')
+        v2 = v2.in_units('cm s**-1')
+        m1 = m1.in_units('g')
+        m2 = m2.in_units('g')
         # Remove units in case input is pynbody SimArray
-        x1 = np.asarray(isaac.strip_units(x1)) * AUCM
-        x2 = np.asarray(isaac.strip_units(x2)) * AUCM
-        v1 = np.asarray(isaac.strip_units(v1)) * 1000 * 100 * VEL_UNIT
-        v2 = np.asarray(isaac.strip_units(v2)) * 1000 * 100 * VEL_UNIT
-        m1 = np.asarray(isaac.strip_units(m1)) * Msol
-        m2 = np.asarray(isaac.strip_units(m2)) * Msol
+        #x1 = np.asarray(isaac.strip_units(x1)) * AUCM
+        #x2 = np.asarray(isaac.strip_units(x2)) * AUCM
+        #v1 = np.asarray(isaac.strip_units(v1)) * 1000 * 100 * VEL_UNIT
+        #v2 = np.asarray(isaac.strip_units(v2)) * 1000 * 100 * VEL_UNIT
+        #m1 = np.asarray(isaac.strip_units(m1)) * Msol
+        #m2 = np.asarray(isaac.strip_units(m2)) * Msol
 
     # Determine length of arrays
     length, ax = computeLenAx(x1)
 
     # Relative position vector in cgs
     r = (x1 - x2)
-    magR = np.linalg.norm(r, axis=ax).reshape(len(r),1)
+    magR = SimArray(np.linalg.norm(r, axis=ax).reshape(len(r),1),'cm')
 
     # Compute standard gravitational parameter in cgs
-    mu = (BigG * (m1 + m2)).reshape(len(r),1)
+    mu = (G * (m1 + m2)).reshape(len(r),1)
 
     # Compute relative velocity vector in cgs with appropriate scale
     v = (v1 - v2)
 
     # Compute specific angular momentum vector
-    h = np.cross(r, v, axis=ax)
+    h = SimArray(np.cross(r, v, axis=ax),'cm**2 s**-1')
 
     # Compute, return eccentricity vector
-    return (np.cross(v, h, axis=ax) / mu) - (r / magR)
+    return (SimArray(np.cross(v, h, axis=ax),'cm**3 s**-2') / mu) - (r / magR)
 
 # end function
 
@@ -565,17 +590,24 @@ def calcArgPeri(x1=1, x2=0, v1=1, v2=0, m1=1, m2=1, flag=True):
     w: Argument of pericenter in degrees
     """
     if flag:
+        #Ensure units are in cgs
+        x1 = x1.in_units('cm')
+        x2 = x2.in_units('cm')
+        v1 = v1.in_units('cm s**-1')
+        v2 = v2.in_units('cm s**-1')
+        m1 = m1.in_units('g')
+        m2 = m2.in_units('g')
         # Remove units since input is pynbody SimArray
-        x1 = np.asarray(isaac.strip_units(x1)) * AUCM
-        x2 = np.asarray(isaac.strip_units(x2)) * AUCM
-        v1 = np.asarray(isaac.strip_units(v1)) * 1000 * 100 * VEL_UNIT
-        v2 = np.asarray(isaac.strip_units(v2)) * 1000 * 100 * VEL_UNIT
-        m1 = np.asarray(isaac.strip_units(m1)) * Msol
-        m2 = np.asarray(isaac.strip_units(m2)) * Msol
+        #x1 = np.asarray(isaac.strip_units(x1)) * AUCM
+        #x2 = np.asarray(isaac.strip_units(x2)) * AUCM
+        #v1 = np.asarray(isaac.strip_units(v1)) * 1000 * 100 * VEL_UNIT
+        #v2 = np.asarray(isaac.strip_units(v2)) * 1000 * 100 * VEL_UNIT
+        #m1 = np.asarray(isaac.strip_units(m1)) * Msol
+        #m2 = np.asarray(isaac.strip_units(m2)) * Msol
 
     # Compute eccentricity vector
     e = calcEccVector(x1, x2, v1, v2, m1, m2, flag=False)
-    magE = np.linalg.norm(e, axis=1)
+    magE = SimArray(np.linalg.norm(e, axis=1),'1')
 
     length, ax = computeLenAx(x1)
 
@@ -594,11 +626,11 @@ def calcArgPeri(x1=1, x2=0, v1=1, v2=0, m1=1, m2=1, flag=True):
     v = (v1 - v2)
 
     # Compute specific angular momentum vector
-    h = np.cross(r, v, axis=ax)
+    h = SimArray(np.cross(r, v, axis=ax),'cm**2 s**-1')
 
     # Compute vector pointing to ascending node
     n = np.cross(k, h, axis=ax)
-    magN = np.linalg.norm(n, axis=ax)
+    magN = SimArray(np.linalg.norm(n, axis=ax),'cm**3 s**-1')
 
     # Ensure no divide by zero errors?
     magN[magN < SMALL] = 1.0
@@ -632,25 +664,32 @@ def calcTrueAnomaly(x1=1, x2=0, v1=1, v2=0, m1=1, m2=1, flag=True):
     nu: True anomaly in degrees
     """
     if flag:
+        #Ensure units are in cgs
+        x1 = x1.in_units('cm')
+        x2 = x2.in_units('cm')
+        v1 = v1.in_units('cm s**-1')
+        v2 = v2.in_units('cm s**-1')
+        m1 = m1.in_units('g')
+        m2 = m2.in_units('g')
         # Remove units since input is pynbody SimArray
-        x1 = np.asarray(isaac.strip_units(x1)) * AUCM
-        x2 = np.asarray(isaac.strip_units(x2)) * AUCM
-        v1 = np.asarray(isaac.strip_units(v1)) * 1000 * 100 * VEL_UNIT
-        v2 = np.asarray(isaac.strip_units(v2)) * 1000 * 100 * VEL_UNIT
-        m1 = np.asarray(isaac.strip_units(m1)) * Msol
-        m2 = np.asarray(isaac.strip_units(m2)) * Msol
+        #x1 = np.asarray(isaac.strip_units(x1)) * AUCM
+        #x2 = np.asarray(isaac.strip_units(x2)) * AUCM
+        #v1 = np.asarray(isaac.strip_units(v1)) * 1000 * 100 * VEL_UNIT
+        #v2 = np.asarray(isaac.strip_units(v2)) * 1000 * 100 * VEL_UNIT
+        #m1 = np.asarray(isaac.strip_units(m1)) * Msol
+        #m2 = np.asarray(isaac.strip_units(m2)) * Msol
 
     # Compute length, correct axis
     length, ax = computeLenAx(x1)
 
     # Compute eccentricity vector
     e = calcEccVector(x1, x2, v1, v2, m1, m2, flag=False)
-    magE = np.linalg.norm(e, axis=ax)
+    magE = SimArray(np.linalg.norm(e, axis=ax),'1')
 
     # Compute radius vector
     r = (x1 - x2)
     v = (v1 - v2)
-    magR = np.linalg.norm(r, axis=ax)
+    magR = SimArray(np.linalg.norm(r, axis=ax),'cm')
 
     # Compute true anomaly making sure I can handle single numbers or arrays
     nu = np.arccos(dotProduct(e, r) / (magE * magR))
