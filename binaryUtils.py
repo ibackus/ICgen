@@ -134,31 +134,38 @@ def linearMomentumEffects(x1, x2, v1, v2, m1, m2, accretion):
 #end function
 
 def find_crit_radius(r,array,toFind,num=1000):
-	"""
-	Given an array as a function of radius,	the array value to search for, the radial range to search over and the search
-	resolution, find the corresponding radius.
-	Assumed that array is calculated as a function of r.
+    """
+    Given an array as a function of radius,	the array value to search for, the radial range to search over and the search
+    resolution, find the corresponding radius.
+    Assumed that array is calculated as a function of r.
 	
-	Inputs:
-	r: array of radial points
-	array: array of quantity of interest (could be surface density?) as a function of r
-	toFind: array value you're looking for
-	num: resolution of search
+    Parameters
+    ----------
+    r: array
+        array of radial points
+    array: array
+        array of quantity of interest (could be surface density?) as a function of r
+    toFind: float
+        array value you're looking for
+    num: int
+        resolution of search
 
-	Output:
-	critial_radius: radius at which array(critical_radius) = toFind (approximately)
-	"""
-	#Require len(r) == len(array) for interpolation to work
-	assert len(r) == len(array)
+    Returns
+    -------
+    critial_radius: float
+        radius at which array(critical_radius) = toFind (approximately)
+    """
+    #Require len(r) == len(array) for interpolation to work
+    assert len(r) == len(array)
 
-	#Estimate surface density as function of radius.  s=0 -> Interpolate through all data points assuming smooth curve
-	array_f = interpolate.UnivariateSpline(r,array,s=0)
+    #Estimate surface density as function of radius.  s=0 -> Interpolate through all data points assuming smooth curve
+    array_f = interpolate.UnivariateSpline(r,array,s=0)
 	
-	#Compute radius array to search over
-	radius = np.linspace(r.min(),r.max(),num)
+    #Compute radius array to search over
+    radius = np.linspace(r.min(),r.max(),num)
 
-	#Find, return critical radius
-	return radius[np.fabs(array_f(radius)-toFind).argmin()]
+    #Find, return critical radius
+    return radius[np.fabs(array_f(radius)-toFind).argmin()]
 
 #end function
 
@@ -303,17 +310,16 @@ def calcDiskRadialBins(s,r_in=0,r_out=0,bins=50):
 
     #Bin gas particles by radius
     pg = pynbody.analysis.profile.Profile(s.gas,max=r_out,nbins=bins)
-    #r = isaac.strip_units(pg['rbins']) #Radius from origin in xy plane
     r = pg['rbins'].in_units('au')    
     
-    mask = (r > r_in) & (r < r_out) #Ensure you're not right on binary or too far out.  Redundant, but whatever
+    mask = (r > r_in) & (r < r_out) #Ensure you're not right on binary or too far out.
     r = r[mask]
 
     #Make nice, evenly spaced radial bins vector
     rBinEdges = np.linspace(np.min(r),np.max(r),bins+1)
  
     #Create compute center of radial bins
-    r = 0.5* (rBinEdges[1:] + rBinEdges[:-1])
+    r = 0.5 * (rBinEdges[1:] + rBinEdges[:-1])
 
     return r, rBinEdges
 
@@ -558,18 +564,24 @@ def findCBResonances(s,r,r_min,r_max,m_max=4,l_max=4,bins=50):
    
    Note: r given MUST correspond to r over which de/dt was calculated.  Otherwise, scale gets all messed up
  
-     Inputs:
+     Parameters
+     ----------
      s: Tipsy-format snapshot
-     r: radius array over which de/dt was calculated
-     r_min,r_max: ,min/maximum disk radius for calculations (au)
-     bins: number of radial bins to calculate over
-     m_max,l_max: maximum orders of (m,l) LR
+     r: array
+         radius array over which de/dt was calculated
+     r_min,r_max: floats
+         min/maximum disk radius for calculations (au)
+     bins: int
+         number of radial bins to calculate over
+     m_max,l_max: ints
+         maximum orders of (m,l) LR
 
-    Output:
-    Orbital frequency for corotation and inner/outer resonances and radii as float and numpy arrays
+    Returns
+    -------
+    Orbital frequency: numpy array
+        for corotation and inner/outer resonances and radii as float and numpy arrays
     """
     stars = s.stars
-    #gas = s.gas
 
     m_min = 1 #m >=1 for LRs, CRs
     l_min = 1 #l >=1 for LRs, CRs
@@ -622,38 +634,42 @@ def findCBResonances(s,r,r_min,r_max,m_max=4,l_max=4,bins=50):
 #end function
 
 def calcCoMVsRadius(s,rBinEdges,starFlag=False):
-	"""
-	Calculates the system's center of mass as a function of radius.  At a given radius r, use the total enclosed
-	mass of the star(s) and gas to compute the center of mass (CoM).  Ideally, I'd like to see the CoM be at
-	[0,0,0] every time (or within a really small number of that).
+    """
+    Calculates the system's center of mass as a function of radius.  At a given radius r, use the total enclosed
+    mass of the star(s) and gas to compute the center of mass (CoM).
 	
-	Inputs: 
-	s: Tipsy-format snapshot readable by pynbody
-	rBinEdges: edges of the array of radii in xy plane
-	starFlag: bool for whether or not to consider stars in center of mass calculation
+    Parameters
+    ----------
+    s: Tipsy-format snapshot readable by pynbody
+    rBinEdges: array
+        edges of the array of radii in xy plane
+    starFlag: bool
+        whether or not to consider stars in center of mass calculation
 
-	Output:
-	Numpy array of len(r) * 3 containing location of CoM in Cartesian coordinates.
-	"""
-	stars = s.stars
-	gas = s.gas
-	com = np.zeros((len(rBinEdges)-1,3))
+    Returns
+    -------
+    com: array
+        Numpy array of len(r) * 3 containing location of CoM in Cartesian coordinates.
+    """
+    stars = s.stars
+    gas = s.gas
+    com = np.zeros((len(rBinEdges)-1,3))
 	
-	if starFlag: #Include stars in center of mass calculation
-		#Loop through radial points, select gas within that r, calc CoM
-		for i in range(0,len(rBinEdges)-1):
-			com[i,:] = computeCOM(stars,gas,cutoff=rBinEdges[i],starFlag=starFlag)
-	else: #Gas disk only
-		for i in range(0,len(rBinEdges)-1):
-			com[i,:] = computeCOM(stars,gas,cutoff=rBinEdges[i],starFlag=starFlag)
-	return com
+    if starFlag: #Include stars in center of mass calculation
+        #Loop through radial points, select gas within that r, calc CoM
+        for i in range(0,len(rBinEdges)-1):
+            com[i,:] = computeCOM(stars,gas,cutoff=rBinEdges[i],starFlag=starFlag)
+    else: #Gas disk only
+        for i in range(0,len(rBinEdges)-1):
+            com[i,:] = computeCOM(stars,gas,cutoff=rBinEdges[i],starFlag=starFlag)
+    
+    return com
 
 #end function
 
 def calcPoissonVsRadius(s,rBinEdges):
 	"""
 	Given a tipsy snapshot and radial bins, compute the Poisson noise, r/sqrt(N_particles), in each radial bin.
-	Expect a powerlaw trend since N_particles ~ Surface density profile.
 	"""	
 	gas = s.gas
 	poisson = np.zeros(len(rBinEdges)-1)	
@@ -669,42 +685,54 @@ def calcPoissonVsRadius(s,rBinEdges):
 #end function
 	
 def calcQ(cs,kappa,sigma):
-	"""
-	Compute the Toomre Q parameter for a gaseous disk.  Implimented here since pynbody calculates it for a
-	stellar disk.
-	Q = (c_s * kappa)/(pi*G*Sigma) > 1 -> axisymmetric stability
-	Input: (all cgs)	
-	c_s: sound speed (cm/s)
-	Kappa: radially epicycle frequency (1/s).  Can also be Omega for a quasi-Keplerian disk
-	Sigma: surface density at some radius (g/cm^2)	
+    """
+    Compute the Toomre Q parameter for a gaseous disk.  Implimented here since pynbody calculates it for a
+    stellar disk.
+    Q = (c_s * kappa)/(pi*G*Sigma) > 1 -> axisymmetric stability
+    
+    Parameters
+    ----------    
+    c_s: float
+        sound speed (cm/s)
+    Kappa: float
+        radially epicycle frequency (1/s).  Can also be Omega for a quasi-Keplerian disk
+    Sigma: float
+        surface density at some radius (g/cm^2)	
 	
-	Output:
-	Q: unitless
-	"""
+    Output:
+    Q: unitless
+        Toomre parameter
+    """
 	
-	return (cs*kappa)/(AddBinary.BigG*np.pi*sigma)
+    return (cs*kappa)/(AddBinary.BigG*np.pi*sigma)
 	
 #end function
 	
 def calcQVsRadius(s,a_in,a_out,bins):
-	"""
-	Given a tispy snapshot, compute the Toomre Q parameter at each radial point.
-	Input:
-	s: Tipsy snapshot
-	a_in, a_out: Minimum and maximum radial points on which to calculate the profile [AU]	
-	bins = number of radial bins	
+    """
+    Given a tispy snapshot, compute the Toomre Q parameter at each radial point.
+    
+    Parameters
+    ----------
+    s: Tipsy snapshot
+    a_in, a_out: floats
+        Minimum and maximum radial points on which to calculate the profile [AU]	
+    bins: int
+        number of radial bins	
 	
-	Output:
-	Q and radially profile (AU) it was calculated on.
-	"""
-	#Derive quantities in correct units
-	p = pynbody.analysis.profile.Profile(s.gas,max=a_out,min=a_in,nbins=bins)
-	sigma = p['density'].in_units('g cm**-2')
-	kappa = p['omega'].in_units('s**-1')
-	cs = p['cs'].in_units('cm s**-1')
-	r = p['rbins']
+    Returns
+    -------
+    r: array, AU
+    Q: array, unitless
+    """
+    #Derive quantities in correct units
+    p = pynbody.analysis.profile.Profile(s.gas,max=a_out,min=a_in,nbins=bins)
+    sigma = p['density'].in_units('g cm**-2')
+    kappa = p['omega'].in_units('s**-1')
+    cs = p['cs'].in_units('cm s**-1')
+    r = p['rbins']
 	
-	return r, calcQ(cs,kappa,sigma)
+    return r, calcQ(cs,kappa,sigma)
 	
 #end function
 	
@@ -715,14 +743,21 @@ def calcStableSigma(r,rd,Mstar,Mdisk,Q):
     unstable to a m=1 mode.  Condition comes from eqn. 110 in Shu 1990.
     Note: Assumes (b_n - c)^2 ~ 1 as authors did.    
     
-    Input:
-    r: radii of OLR [AU]
-    rd: Maximum radially extent of the disk [AU]
-    Mstar, Mdisk: Masses of the central star(s) and disk, respectively [Msol]
-    Q: Toomre Q stability parameter evalutated at rd
+    Parameters
+    -----------
+    r: array
+        radii of OLR [AU]
+    rd: float
+        Maximum radially extent of the disk [AU]
+    Mstar, Mdisk: floats
+        Masses of the central star(s) and disk, respectively [Msol]
+    Q: float
+        Toomre Q stability parameter evalutated at rd
     
-    Output:
-    sigma_0: critical surfance density [Msol/AU^2]
+    Returns
+    -------
+    sigma_0: array
+        critical surfance density [Msol/AU^2]
     """    
     sigma_0 = 3.0*(Mstar + Mdisk)/(8.0*np.pi*np.pi*r*r)
     sigma_0 *= np.power(r/rd,3.0)

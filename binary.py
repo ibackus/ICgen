@@ -158,6 +158,8 @@ class Binary(object):
         """
         # Compute orbital elements from binary center of mass frame Cartesian
         # coordinates
+        assert (self.state != 'Kepler' or self.state != 'kepler'), "Already have orbital elements."        
+        
         zeroR = SimArray([[0.0, 0.0, 0.0]],'cm')
         zeroV = SimArray([[0.0, 0.0, 0.0]],'cm s**-1')
         oe = AddBinary.calcOrbitalElements(
@@ -179,7 +181,7 @@ class Binary(object):
         Compute the Cartesian position and velocity in the reduced mass frame.
         """
         assert (self.state == "Kepler" or self.state ==
-                "kepler"), "Already have cartesian coords!"
+                "kepler"), "Already have cartesian coordinates."
         M = AddBinary.trueToMean(self.nu, self.e)
         self.r, self.v = AddBinary.keplerToCartesian(
             self.a, self.e, self.i, self.Omega, self.w, M, self.m1, self.m2)
