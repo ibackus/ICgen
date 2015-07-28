@@ -8,7 +8,6 @@ import numpy as np
 
 # Import my binary star module that continue relevant routines
 import AddBinary
-import isaac
 import pynbody
 SimArray = pynbody.array.SimArray
 
@@ -45,7 +44,6 @@ class Binary(object):
             assert (len(
                 X) == 2), "Improper input. len(Input Array) != 2. len = %d.  State should be cartesian." % len(X)
             self.state = state
-
             self.r = X[0]
             self.v = X[1]
             self.m1 = m1
@@ -58,7 +56,6 @@ class Binary(object):
             assert (len(
                 X) == 6), "Improper input. len(Input Array) != 6. len = %d.  State should be kepler" % len(X)
             self.state = state
-
             self.assignOrbElems(X)
             self.m1 = m1
             self.m2 = m2
@@ -72,12 +69,12 @@ class Binary(object):
             self.state = state
 
             # Extract data from snapshot
-            x1 = isaac.strip_units(X.stars[0]['pos'])
-            x2 = isaac.strip_units(X.stars[1]['pos'])
-            v1 = isaac.strip_units(X.stars[0]['vel'])
-            v2 = isaac.strip_units(X.stars[1]['vel'])
-            self.m1 = isaac.strip_units(X.stars[0]['mass'])
-            self.m2 = isaac.strip_units(X.stars[1]['mass'])
+            x1 = X.stars[0]['pos']
+            x2 = X.stars[1]['pos']
+            v1 = X.stars[0]['vel']
+            v2 = X.stars[1]['vel']
+            self.m1 = X.stars[0]['mass']
+            self.m2 = X.stars[1]['mass']
 
             # Compute position, velocity in center of mass frame then orbital
             # elements
@@ -189,17 +186,20 @@ class Binary(object):
 
     # end function
 
-    def generateICs(self):
+    def generateICs(self,pos_unit,vel_unit):
         """
         From Kepler orbital elements, compute the position, velocities for two stars in ChaNGa-friendly units.
         Called "generateICs" since I'll use this mainly to...generate initial conditions
         """
+        self.r = SimArray(self.r,pos_unit)
+        self.v = SimArray(self.v,vel_unit)        
+        
         x1, x2, v1, v2 = AddBinary.reduceToPhysical(
             self.r, self.v, self.m1, self.m2)
-        x1 = np.asarray(x1).reshape((1, 3))
-        x2 = np.asarray(x2).reshape((1, 3))
-        v1 = np.asarray(v1).reshape((1, 3))
-        v2 = np.asarray(v2).reshape((1, 3))
+        x1 = x1.reshape((1, 3))
+        x2 = x2.reshape((1, 3))
+        v1 = v1.reshape((1, 3))
+        v2 = v2.reshape((1, 3))
         return x1, x2, v1, v2
 
     # end function
