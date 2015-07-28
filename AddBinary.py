@@ -56,11 +56,15 @@ def pToA(period=1, M=1):
     """
     Converts period (in days) into semimajor axis (in au) given Kepler law
 
-        Input:
-    Period (days)
-    M = COM mass
+    Parameters
+    ----------
+    Period: float
+        [days]
+    M: float
+        COM mass [Msol]
 
-    Output:
+    Returns
+    -------
     Semimajor axis a (au)
     """
     conv = (DAYSEC * DAYSEC * Msol) / (AUCM * AUCM * AUCM)
@@ -74,12 +78,17 @@ def aToP(a=1, M=1):
     """
     Given a semimajor axis (au), convert into period (in days) given Kepler law
 
-    Input:
-    a: semimajor axis (au)
-    M: mass of system (Msol)
+    Parameters
+    ----------
+    a: float
+        semimajor axis [au]
+    M: float
+        mass of system [Msol]
 
-    Output:
-    Period (days)
+    Returns
+    -------
+    Period: float
+        [days]
     """
     conv = (AUCM * AUCM * AUCM) / (DAYSEC * DAYSEC * Msol)
     P = 4.0 * conv * np.pi * np.pi * a * a * a / (BigG * M)
@@ -101,14 +110,21 @@ def calcPositions(M=1, a=1, e=0, p=0.5):
     (ex: If 1Msol system and MPri = Msec = 0.5 -> M =1 -> p = 0.5)
     Assume stars start a perihelion
 
-    Input:
-    M Total mass of system (Msol)
-    a Semimajor axis (au)
-    e eccentricity
-    p % of total mass contained in primary (m1)
+    Parameters
+    ----------
+    M: float
+        Total mass of system (Msol)
+    a: float
+        Semimajor axis (au)
+    e: float
+        eccentricity
+    p: float
+        % of total mass contained in primary (m1)
 
-    Output:
-    Semimajor axes of binary stars assuming that they start at perihelion.
+    Returns
+    -------
+    x1, x2: float
+        Semimajor axes of binary stars assuming that they start at perihelion.
     """
 
     # Compute masses
@@ -130,16 +146,22 @@ def calcPositions(M=1, a=1, e=0, p=0.5):
 
 def calcV(m1=0.5, m2=0.5, a=1, e=0):
     """
-Given total mass M, postions of stars at perihelion x1, x2, and eccentricity e, calculate the velocities of the stars
-assuming that they are located at the perihelion and rotate in same direction as disk (CCW)
+    Given total mass M, postions of stars at perihelion x1, x2, and eccentricity e, calculate the velocities of the stars
+    assuming that they are located at the perihelion and rotate in same direction as disk (CCW)
 
-Input:
-m1, m2 are masses of primary and secondary (Msol)
-x1, x2 are semimajor axes of primary and secondary (au)
-e eccentricity
+    Parameters
+    ----------
+    m1, m2: floats
+        masses of primary and secondary (Msol)
+    x1, x2: floats
+        are semimajor axes of primary and secondary (au)
+    e: float
+        eccentricity
 
-Output:
-v1, v2 velocities of m1, m2 in km/s oriented for CCW rotation (in xy plane)
+    Returns
+    -------
+    v1, v2: floats
+        velocities of m1, m2 in km/s oriented for CCW rotation (in xy plane)
     """
     # Correct units and conversion factors, sqrt of positive numbers
     M = m1 + m2
@@ -165,14 +187,20 @@ def calcCriticalRadius(a=1, e=0, m1=0.5, m2=0.5):
     Calculates based on best fit from Holman&Wiegert+1999 (outer/P-type region)
     Assumes m1 ~ m2 and NOT m1 >> m2 or m2 >> m1
 
-    Input:
-    Semimajor axis a of the binary system (au)
-    Eccentricity e of binary system
-    Masses of binary components m1, m2 (Msol)
+    Parameters
+    ----------
+    a: float
+        Semimajor axis a of the binary system (au)
+    e: float
+        Eccentricity e of binary system
+    m1, m2: floats
+        Masses of binary components m1, m2 (Msol)
 
-    Output:
-    Lower bounds for circumbinary planet's distace from binary COM and error terms of the following form:
-    ac, pmac (error bounds are symmetric) both in au
+    Returns
+    -------
+    ac, pmac: floats
+        Lower bounds for circumbinary planet's distace from binary COM and error terms of the following form:
+        ac, pmac (error bounds are symmetric) both in au
     """
 
     # Compute mass ratio
@@ -333,9 +361,6 @@ def calcSemi(x1, x2, v1, v2, m1, m2, flag=True):
     -------
     a: float
         semimajor axis of binary orbit in AU
-
-    Edits:
-    dflemin3 added support to calculate a over arrays and not just 1 value 3/3/2015
     """
     if flag:
         #Ensure units are in cgs
@@ -493,7 +518,6 @@ def calcLongOfAscNode(x1=1, x2=0, v1=1, v2=0, flag=True):
         i[0, 0] = 1
         k[0, 2] = 1
 
-    # Define specific angular momentum vector
     # Relative position vector in cgs
     r = (x1 - x2)
 
@@ -546,7 +570,7 @@ def calcEccVector(x1=1, x2=0, v1=1, v2=0, m1=1, m2=1, flag=True):
 
     Returns
     -------
-    Ecc: float
+    Ecc: array
         Eccentricity vector in cgs
     """
     if flag:
@@ -762,6 +786,7 @@ def calcEccentricAnomaly(x1=1, x2=0, v1=1, v2=0, m1=1, m2=1, flag=True):
     E: float
         Eccentric anomaly in degrees
     """
+    #This if/else is stupid and I should change it eventually--dflemin3
     if flag:
         #Ensure units are in cgs
         x1 = x1.in_units('cm')
@@ -926,8 +951,8 @@ def keplerToCartesian(
         Mean Anomaly (degrees)
     m1, m2: float
         Masses of central object(s) (Msol)
-    Flags: bools
-        Tells code to convert degrees->rad and/or scale velocity to sim units
+    angleFlag, scaleFlag: bools
+        Tells code to convert degrees->rad and/or scale velocity to sim units, respectively
 
     Returns
     -------
@@ -1146,14 +1171,22 @@ def calcCircularFrequency(x1, x2, v1, v2, m1, m2, flag=True):
     omega = (L_z)/(R^2) which assumes spherical symmetry (ok assumption here)
     L = sqrt(G*M*a*(1-e^2) for ~Keplerian
 
-    Input: Assumed as pynbody SimArrays in simulation units (AU, scaled velocity, etc)
-    Primary and secondary position arrays x1, x2 (in AU)
-    Primary and secondary velocity arrays v1, v2 (km/s)
-    Masses: m1, m2 (Msol)
+    Parameters
+    ----------
+    Assumed as pynbody SimArrays in simulation units (AU, scaled velocity, etc)
+    
+    x1,x2: arrays
+        Primary and secondary position arrays (in AU)
+    v1, v2: arrays
+        Primary and secondary velocity arrays (km/s)
+    m1, m2: floats
+        Primary and secondary masses (Msol)
     Flag: Whether or not to internally convert to cgs units
 
-    Output:
-    omega: Circular frequency in 1/days
+    Returns
+    -------
+    omega: float
+        Circular frequency in 1/days
     """
     e = calcEcc(x1, x2, v1, v2, m1, m2, flag=True)
     a = calcSemi(x1, x2, v1, v2, m1, m2, flag=True) * AUCM
@@ -1188,12 +1221,19 @@ def calcCOM(m1=0.5, m2=0.5, x1=1, x2=1):
     function calculates the CoM of the two particles in order to check that
     it's still roughly 0.
 
-    Input: (as pynbody SimArrays)
-    Primary and secondary mass arrays (in Msol)
-    Primary and secondary position arrays (in AU)
+    Parameters
+    ----------
+    
+    (as pynbody SimArrays)
+    m1, m2: SimArrays
+        Primary and secondary mass arrays (in Msol)
+    x1, x2: SimArrays
+        Primary and secondary position arrays (in AU)
 
-    Output:
-    Center of mass position vector (numpy array in AU)
+    Returns
+    -------
+    center of mass: array
+        Center of mass position vector (numpy array in AU)
     """
 
     # Strip units from inputs
@@ -1213,12 +1253,17 @@ def calcRocheLobe(q, a):
     Given the mass ratio q = m1/m2 and the semimajor axis in AU, compute the radius of the Roche lobe
     around m1 given the Eggleton approximation http://en.wikipedia.org/wiki/Roche_lobe
 
-    Inputs:
-    Binary mass ratio q = m1/m2
-    Binary semimajor axis a (in AU)
+    Parameters
+    ----------
+    q: float
+        Binary mass ratio q = m1/m2
+    a: float
+        Binary semimajor axis a (in AU)
 
-    Output:
-    Radius of Roche lobe around m1 (in AU)
+    Returns
+    -------
+    r: float
+        Radius of Roche lobe around m1 (in AU)
     """
     num = 0.49 * np.power(q, 2. / 3.)
     denom = 0.6 * np.power(q, 2. / 3.) + np.log(1.0 + np.power(q, 1. / 3.))
@@ -1232,11 +1277,14 @@ def dotProduct(a, b):
     """
     Given n x m numpy arrays, compute the dot product row-wise.
 
-    Input:
+    Parameters
+    ----------
     a,b: nxm numpy array
 
-    Output:
-    dot product: numpy array with n rows containing dot products
+    Returns
+    -------
+    dot product: numpy array 
+        n rows containing dot products
     """
     # Don't trust user, make sure a, b are numpy arrays of same shape
     a = np.asarray(a)
