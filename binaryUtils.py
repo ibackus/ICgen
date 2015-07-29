@@ -860,3 +860,46 @@ def diskPrecession(s,r):
     return omega_p
     
 #end function
+    
+def diskAverage(s,x,r_in=None,r_out=None):
+    """
+    Computes the accretion disk mass-averaged for x via the following equation:
+    integral of 2*pisigma*x*r*dr / integral of 2*pi*sigma*r*dr all from r_in to r_out
+    
+    Parameters
+    ----------
+    s : tipsy snapshot
+    x : array
+        array of quantity to be averaged over, like eccentricity
+    r_in, r_out: floats
+        inner and outer radii for averaging region.
+        If none, use entire disk
+        
+    Returns
+    -------
+    y: float
+        disk-averaged x
+    """
+
+    ### TODO: Use numpy trapz instead for better accuracy ###    
+    
+    #Generate radial surface density profile
+    if r_in == None or r_out == None:    
+        pg = pynbody.analysis.profile.Profile(s.gas,nbins=len(x))
+        r = pg['rbins'].in_units('au')
+        sigma = pg['density'].in_units('Msol au**-2')
+    else:
+        pg = pynbody.analysis.profile.Profile(s.gas,min = r_in, max = r_out, nbins=len(x))
+        r = pg['rbins'].in_units('au')
+        sigma = pg['density'].in_units('Msol au**-2')
+    
+    #Compute total mass in region    
+    dr = r[1] - r[0]    
+    denom = np.sum(sigma*r*dr)
+    
+    #Compute mass-averaged x in region
+    num = np.sum(sigma*r*x*dr)
+
+    return num/denom
+    
+#end function
