@@ -683,7 +683,7 @@ def calcArgPeri(x1=1, x2=0, v1=1, v2=0, m1=1, m2=1, flag=True):
 
     # Compute argument of periapsis
     inc = calcInc(x1, x2, v1, v2)/RAD2DEG
-    arg = dotProduct(n, e) / magN * magE
+    arg = dotProduct(n, e) / (magN * magE)
     
     # Bounds check arg    
     w = np.arccos(arg)
