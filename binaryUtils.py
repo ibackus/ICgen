@@ -218,15 +218,15 @@ def computeVelocityCOM(s,cutoff=None,starFlag=True,gasFlag=True):
 
     Parameters
     ----------
-    s: pynbody snapshot
-    cutoff: float
+    s : pynbody snapshot
+    cutoff : float
         radius at which you only consider objects interior to it [AU]
-    starFlag: bool
+    starFlag : bool
         whether or not to consider stars
-    gasFlag: bool
+    gasFlag : bool
         whether or not to consider gas
 
-    Returns:
+    Returns
     -------
     Center of mass velocity: SimArry
         in AU for each vx,vy,vz component
@@ -252,22 +252,22 @@ def computeVelocityCOM(s,cutoff=None,starFlag=True,gasFlag=True):
 	
         #Compute stellar mass, mass-weighted position
         starMass = stars[0]['mass'] + stars[1]['mass']
-        starPos = (stars[0]['vel']*stars[0]['mass'] + stars[1]['vel']*stars[1]['mass']).in_units('Msol km s**-1')
+        starPos = stars[0]['vel'].in_units('km s**-1')*stars[0]['mass']
+        starPos += stars[1]['vel'].in_units('km s**-1')*stars[1]['mass']
 	
         if gasFlag:
             #Compute, return total center of mass
-            com = (starPos + np.sum(gas['vel']*gas[0]['mass'],axis=0)).in_units('Msol km s**-1')
+            com = starPos + np.sum(gas['vel'].in_units('km s**-1')*gas[0]['mass'],axis=0)
             com /= starMass + np.sum(gas['mass'])
-            return com.in_units('km s**-1')
+            return com
         else:
             com = (starPos/starMass)
-            return com.in_units('km s**-1')
+            return com
           
     else: #No stars, just gas
-         com = np.sum(gas['vel'].in_units("km s**-1")*gas[0]['mass'],axis=0).in_units("Msol km s**-1")
+         com = np.sum(gas['vel'].in_units("km s**-1")*gas[0]['mass'],axis=0)
          com /= np.sum(gas['mass'])
-         print com.units
-         return com.in_units('km s**-1')
+         return com
 
 #end function
 
@@ -864,7 +864,7 @@ def diskPrecession(s,r):
     
 #end function
     
-def diskAverage(s,r_out,bins=50):
+def diskAverage(s,r_out,bins=50,avgFlag=True):
     """
     Computes the accretion disk mass-averaged for x via the following equation:
     integral of 2*pisigma*x*r*dr / integral of 2*pi*sigma*r*dr.
@@ -878,6 +878,9 @@ def diskAverage(s,r_out,bins=50):
         outer radii for averaging region. If none, use entire disk
     bins : int
         how many radial bins to calculate quantities over
+    avgFlag : bool
+        whether or not to average over all particles in a radial bin
+        for orbital element calculation
         
     Returns
     -------
@@ -902,7 +905,7 @@ def diskAverage(s,r_out,bins=50):
     #Compute quantities to integrate
     sig = N*m_gas/(2.0*np.pi*r*dr)
     #s['pos'] += cm
-    x = orbElemsVsRadius(s,rBinEdges,average=True)
+    x = orbElemsVsRadius(s,rBinEdges,average=avgFlag)
     
     #Take correct cuts of data
     mask = r < r_out

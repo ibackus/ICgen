@@ -531,7 +531,7 @@ def calcLongOfAscNode(x1=1, x2=0, v1=1, v2=0, flag=True):
     magN = SimArray(np.linalg.norm(n, axis=ax),'cm**2 s**-1')
 
     # Ensure no divide by zero errors?
-    magN[magN < SMALL] = 1.0
+    #magN[magN < SMALL] = 1.0
 
     # Compute LoAN
     inc = calcInc(x1, x2, v1, v2)/RAD2DEG
@@ -621,13 +621,13 @@ def calcArgPeri(x1=1, x2=0, v1=1, v2=0, m1=1, m2=1, flag=True):
     ----------
     Assumed as pynbody SimArrays [preferred units]
     
-    x1,x2: SimArrays
+    x1,x2 : SimArrays
         Primary and secondary position arrays [AU]
-    v1,v2: SimArrays
+    v1,v2 : SimArrays
         Primary and secondary velocity arrays [km/s]
-    m1, m2: SimArrays
+    m1, m2 : SimArrays
         Primary and secondary masses [Msol]
-    Flag: bool
+    Flag : bool
         Whether or not to internally convert to cgs units
 
     Returns
@@ -687,8 +687,8 @@ def calcArgPeri(x1=1, x2=0, v1=1, v2=0, m1=1, m2=1, flag=True):
     
     # Bounds check arg    
     w = np.arccos(arg)
-    w[arg < -1.0] = np.pi
-    w[arg > 1.0] = 0.0
+    #w[arg < -1.0] = np.pi
+    #w[arg > 1.0] = 0.0
     w[dotProduct(e, k) < 0] = 2.0 * np.pi - w[dotProduct(e, k) < 0.0]
     w[inc < SMALL] = 0.0  # For orbit in a plane
 
