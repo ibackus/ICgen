@@ -534,7 +534,7 @@ def calcLongOfAscNode(x1=1, x2=0, v1=1, v2=0, flag=True):
     magN[magN < SMALL] = 1.0
 
     # Compute LoAN
-    inc = calcInc(x1, x2, v1, v2)
+    inc = calcInc(x1, x2, v1, v2)/RAD2DEG
     Omega = np.arccos(dotProduct(i, n) / magN)
 
     # If inclination is ~0, define LoAN as 0
@@ -660,9 +660,9 @@ def calcArgPeri(x1=1, x2=0, v1=1, v2=0, m1=1, m2=1, flag=True):
     # Define unit vector pointing along z axis
     k = np.zeros((length, 3))
     if length > 1:
-        k[:, 2] = 1
+        k[:, 2] = 1.0
     else:
-        k[0, 2] = 1
+        k[0, 2] = 1.0
 
     # Define specific angular momentum vector
     # Relative position vector in cgs
@@ -682,9 +682,14 @@ def calcArgPeri(x1=1, x2=0, v1=1, v2=0, m1=1, m2=1, flag=True):
     magN[magN < SMALL] = 1.0
 
     # Compute argument of periapsis
-    inc = calcInc(x1, x2, v1, v2)
-    w = np.arccos(dotProduct(n, e) / magN * magE)
-    w[dotProduct(e, k) < 0] = 2.0 * np.pi - w[dotProduct(e, k) < 0]
+    inc = calcInc(x1, x2, v1, v2)/RAD2DEG
+    arg = dotProduct(n, e) / magN * magE
+    
+    # Bounds check arg    
+    w = np.arccos(arg)
+    w[arg < -1.0] = np.pi
+    w[arg > 1.0] = 0.0
+    w[dotProduct(e, k) < 0] = 2.0 * np.pi - w[dotProduct(e, k) < 0.0]
     w[inc < SMALL] = 0.0  # For orbit in a plane
 
     #Return in degrees

@@ -806,7 +806,10 @@ def orbElemsVsRadius(s,rBinEdges,average=False):
                 mass = M
             N = len(gas[rMask])
             g = gas[rMask]
-            orbElems[:,i] = np.sum(AddBinary.calcOrbitalElements(g['pos'],com,g['vel'],zero,mass,g['mass']),axis=-1)/N
+            if N > 0:
+                orbElems[:,i] = np.sum(AddBinary.calcOrbitalElements(g['pos'],com,g['vel'],zero,mass,g['mass']),axis=-1)/N
+            else: #If there are no particles in the bin, set it as a negative number to mask out later
+                orbElems[:,i] = -1.0
         else: #Randomly select 1 particle in subsection for calculations
             rMask = np.logical_and(gas['rxy'].in_units('au') > rBinEdges[i], gas['rxy'].in_units('au') < rBinEdges[i+1])
             if i > 0:            
@@ -861,44 +864,57 @@ def diskPrecession(s,r):
     
 #end function
     
-def diskAverage(s,x,r_in=None,r_out=None):
+def diskAverage(s,r_out,bins=50):
     """
     Computes the accretion disk mass-averaged for x via the following equation:
-    integral of 2*pisigma*x*r*dr / integral of 2*pi*sigma*r*dr all from r_in to r_out
+    integral of 2*pisigma*x*r*dr / integral of 2*pi*sigma*r*dr.
+    Sigma, e,a... calculated on the fly to ensure that they are all evaluated at
+    the same location.
     
     Parameters
     ----------
     s : tipsy snapshot
-    x : array
-        array of quantity to be averaged over, like eccentricity
-    r_in, r_out: floats
-        inner and outer radii for averaging region.
-        If none, use entire disk
+    r_out : float
+        outer radii for averaging region. If none, use entire disk
+    bins : int
+        how many radial bins to calculate quantities over
         
     Returns
     -------
-    y: float
-        disk-averaged x
-    """
-
-    ### TODO: Use numpy trapz instead for better accuracy ###    
+    y: list
+        disk-averaged Keplerian orbital elements [e,a,i,Omega,w,nu] in AU, degrees (depending on unit)
+    """    
     
     #Generate radial surface density profile
-    if r_in == None or r_out == None:    
-        pg = pynbody.analysis.profile.Profile(s.gas,nbins=len(x))
-        r = pg['rbins'].in_units('au')
-        sigma = pg['density'].in_units('Msol au**-2')
-    else:
-        pg = pynbody.analysis.profile.Profile(s.gas,min = r_in, max = r_out, nbins=len(x))
-        r = pg['rbins'].in_units('au')
-        sigma = pg['density'].in_units('Msol au**-2')
+    #Begin by subtracting off the center of mass position
+    #cm = computeCOM(s.stars,s.gas,cutoff=r_out,starFlag=True)
+    #s['pos'] -= cm
+    r = s.gas['rxy'].in_units('au')
+
+    #Particle mass
+    m_gas = s.gas['mass'][[0]]
+    
+    N, rBinEdges = np.histogram(r, bins=bins,range=(r.min(),r_out))
+    rBinEdges = SimArray(rBinEdges,'au')
+    r = (rBinEdges[1:] + rBinEdges[:-1])/2.0
+    dr = rBinEdges[[1]] - rBinEdges[[0]]
+    
+    #Compute quantities to integrate
+    sig = N*m_gas/(2.0*np.pi*r*dr)
+    #s['pos'] += cm
+    x = orbElemsVsRadius(s,rBinEdges,average=True)
+    
+    #Take correct cuts of data
+    mask = r < r_out
+    r = r[mask]
+    sig = sig[mask]
+    x = x[:,mask]
     
     #Compute total mass in region    
-    dr = r[1] - r[0]    
-    denom = np.sum(sigma*r*dr)
+    denom = np.trapz(sig*r,r)
     
     #Compute mass-averaged x in region
-    num = np.sum(sigma*r*x*dr)
+    num = np.trapz(sig*r*x[:],r)
 
     return num/denom
     
