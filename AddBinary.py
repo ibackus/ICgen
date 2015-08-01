@@ -914,6 +914,49 @@ def trueToMean(nu, e):
     M = E - e * np.sin(E)
     return (M * RAD2DEG)
 
+#end function
+
+def calcMeanMotion(x1, x2, v1, v2, m1, m2, flag=True):
+    """
+    Given pynbody arrays for positions and velocity of primary and secondary bodies
+    and masses, calculates the Mean motion in the reduced two body system.
+    Usage note: Intended for binary system, but pass x2 = v2 = 0 to use with any
+    location in the disk.
+
+    Parameters
+    ----------
+    Assumed as pynbody SimArrays [preferred units]
+    
+    x1,x2: SimArrays
+        Primary and secondary position arrays [AU]
+    v1,v2: SimArrays
+        Primary and secondary velocity arrays [km/s]
+    m1, m2: SimArrays
+        Primary and secondary masses [Msol]
+    Flag: bool
+        Whether or not to internally convert to cgs units
+
+    Returns
+    -------
+    n: SimArray
+        Mean motion in 1/s
+    """
+    if flag:
+        #Ensure units are in cgs
+        x1 = x1.in_units('cm')
+        x2 = x2.in_units('cm')
+        v1 = v1.in_units('cm s**-1')
+        v2 = v2.in_units('cm s**-1')
+        m1 = m1.in_units('g')
+        m2 = m2.in_units('g')
+        
+    #Put binary in reduced mass frame, compute, return
+    a = SimArray(calcSemi(x1,x2,v1,v2,m1,m2,flag=False),'au').in_units('cm')
+    mu = G * (m1 + m2)
+    return np.sqrt(mu/np.power(a,3))
+    
+#end function
+
 ##########################################################################
 #                                                                                               #
 #	Functions for computing Cartesian coordinates from Keplerian orbital elements.              #
@@ -1123,7 +1166,7 @@ def initializeBinary(
 ##########################################################################
 
 
-def accretionEDot(Binary, Mdot, dt):
+def accretionEDot(Binary, M_dot, dt):
     """
     Given a Binary object and an accretion rate (assumed to be in M_sol/yr), compute the theoretical rate of change of the
     binary's eccentricity in 1/second.
@@ -1148,7 +1191,7 @@ def accretionEDot(Binary, Mdot, dt):
     e = Binary.e
     M = (Binary.m1 + Binary.m2) * Msol
     mu = BigG * M
-    Mdot *= Msol
+    Mdot = M_dot*Msol
     #dm = Mdot*dt
     r = a * (1.0 + e)
     eps = -mu / (2.0 * a)
@@ -1163,6 +1206,42 @@ def accretionEDot(Binary, Mdot, dt):
     return edot
 
 # end function
+
+def binaryPrecession(s,r_in,r_out):
+    """
+    Computes the period of the binary precession due to an axisymmetric disk (!!!)
+    given by Rafikov 2013.
+
+    Parameters
+    ----------
+    s : Tipsy snapshot
+    r_in, r_out : float
+        inner and outer radii of the circumbinary disk [AU]
+        
+    Returns
+    -------
+    T : SimArray
+        Period of binary argument of periastron precession in yr
+    """
+    x1 = s.stars[0]['pos'].in_units('cm')
+    x2 = s.stars[1]['pos'].in_units('cm')
+    v1 = s.stars[0]['vel'].in_units('cm s**-1')
+    v2 = s.stars[1]['vel'].in_units('cm s**-1')
+    m1 = s.stars[0]['mass'].in_units('g')
+    m2 = s.stars[1]['mass'].in_units('g')    
+    
+    # Define required parameters in cgs
+    M_bin = m1 + m2
+    M_disk = np.sum(s.gas['mass']).in_units('g')    
+    a = SimArray(calcSemi(x1,x2,v1,v2,m1,m2,flag=False),'au').in_units('cm') #semimajor axis in cm
+    n = calcMeanMotion(x1, x2, v1, v2, m1, m2, flag=False) #mean motion in 1/s    
+    r_in = SimArray(r_in,'au').in_units('cm')
+    r_out = SimArray(r_out,'au').in_units('cm')    
+    
+    T = 8.0*np.pi*(M_bin/M_disk)*(np.power(r_out,0.5)*np.power(r_in,2.5)/(np.power(a,3)*0.5*n))
+    return isaac.strip_units(T)/YEARSEC
+    
+#end function
 
 
 def calcCircularFrequency(x1, x2, v1, v2, m1, m2, flag=True):

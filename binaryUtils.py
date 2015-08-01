@@ -169,7 +169,7 @@ def find_crit_radius(r,array,toFind,num=1000):
 
 #end function
 
-def computeCOM(stars,gas,cutoff=None,starFlag=True):
+def computeCOM(stars,gas,cutoff=None,starFlag=True,gasFlag=True):
     """
     Given pynbody star and gas arrays, compute the center of mass for the entire specified system.
 
@@ -188,7 +188,9 @@ def computeCOM(stars,gas,cutoff=None,starFlag=True):
         Center of mass (in AU for each x,y,z component)
     """
     com = pynbody.array.SimArray(np.zeros(3),'au')	
- 
+
+    assert starFlag == True or gasFlag == True, "At least one flag must be true."    
+    
     #If there's a cutoff, select gas particles with cylindrical radius less than the cutoff
     if cutoff != None:
         mask = gas['rxy'] < cutoff
@@ -200,16 +202,25 @@ def computeCOM(stars,gas,cutoff=None,starFlag=True):
 	
         #Compute stellar mass, mass-weighted position
         starMass = stars[0]['mass'] + stars[1]['mass']
-        starPos = (stars[0]['pos']*stars[0]['mass'] + stars[1]['pos']*stars[1]['mass']).in_units('Msol au')
+        starPos = stars[0]['pos'].in_units('au')*stars[0]['mass']
+        starPos += stars[1]['pos'].in_units('au')*stars[1]['mass']
 	
-        #Compute, return total center of mass
-        com = (starPos + np.sum(gas['pos']*gas[0]['mass'],axis=0)).in_units('Msol au')
-        return (com/np.sum(starMass+np.sum(gas['mass']))).in_units('au')
+        if gasFlag:
+            #Compute, return total center of mass
+            com = starPos + np.sum(gas['pos'].in_units('au')*gas[0]['mass'],axis=0)
+            com /= (starMass + np.sum(gas['mass']))
+            return com
+        else:
+            com = (starPos/starMass)
+            return com
+          
     else: #No stars, just gas
-        com = np.sum(gas['pos'])*gas[0]['mass']/np.sum(gas['mass'])
-        return com.in_units('au')
+         com = np.sum(gas['pos'].in_units("au")*gas[0]['mass'],axis=0)
+         com /= np.sum(gas['mass'])
+         return com
 
-#end function
+#end function 
+ 
 
 def computeVelocityCOM(s,cutoff=None,starFlag=True,gasFlag=True):
     """
@@ -258,7 +269,7 @@ def computeVelocityCOM(s,cutoff=None,starFlag=True,gasFlag=True):
         if gasFlag:
             #Compute, return total center of mass
             com = starPos + np.sum(gas['vel'].in_units('km s**-1')*gas[0]['mass'],axis=0)
-            com /= starMass + np.sum(gas['mass'])
+            com /= (starMass + np.sum(gas['mass']))
             return com
         else:
             com = (starPos/starMass)
@@ -825,7 +836,7 @@ def orbElemsVsRadius(s,rBinEdges,average=False):
     
 #end function    
     
-def diskPrecession(s,r):
+def diskPrecession(s,radius):
     """
     Computes the precession of the disk due to the binary quadrupole moment.
     The precessions considered are kappa_r and kappa_z corresponding to the
@@ -840,7 +851,7 @@ def diskPrecession(s,r):
     
     s: Tipsy snapshot
     r: numpy array
-        array of radial bins centers in AU
+        array of radial bins centers [AU]
         
     Returns:
     -------
@@ -849,14 +860,16 @@ def diskPrecession(s,r):
         2 x len(rBinEdges)-1 array containing precession at each radial point in 1/s
     """
     #Compute relevant frequencies
-    alpha = 0.25
-    mu = ((s.stars[0]['mass'] * s.stars[1]['mass'])/np.sum(s.stars['mass']))*AddBinary.Msol
-    omega = np.sqrt((AddBinary.BigG*mu/np.power(r,3)) * (1.0 + 3.0*alpha/np.power(r,2)))
-    kappa_r = np.sqrt((AddBinary.BigG*mu/np.power(r,3)) * (1.0 - 3.0*alpha/np.power(r,2)))
-    kappa_z = np.sqrt((AddBinary.BigG*mu/np.power(r,3)) * (1.0 + 9.0*alpha/np.power(r,2)))
+    alpha = SimArray(0.25,'au**2')
+    r = SimArray(radius,'au')
+    grav = SimArray(4.0*np.pi**2,'au**3 yr**-2 Msol**-1')
+    mu = (s.stars[0]['mass'] * s.stars[1]['mass'])/np.sum(s.stars['mass'])
+    omega = np.sqrt((grav*mu/np.power(r,3)) * (1.0 + 3.0*alpha/np.power(r,2)))
+    kappa_r = np.sqrt((grav*mu/np.power(r,3)) * (1.0 - 3.0*alpha/np.power(r,2)))
+    kappa_z = np.sqrt((grav*mu/np.power(r,3)) * (1.0 + 9.0*alpha/np.power(r,2)))
     
     #Compute precession. > 0 -> preccesion, < 0 -> recession
-    omega_p = np.zeros((2,len(r)))
+    omega_p = SimArray(np.zeros((2,len(r))),'yr**-1')
     omega_p[0,:] = omega - kappa_r
     omega_p[1,:] = omega - kappa_z
     
