@@ -20,11 +20,11 @@ IC.settings.physical.m = SimArray(2.35, 'm_p') #mean molecular mass
 #Define masses of primary, secondary as pynbody SimArrays
 #Note, m1 + m2 == IC.settings.physical.M 
 #Only need to set if you're considernig a circumbinary system
-m1 = SimArray(0.949,'Msol')
+m1 = SimArray(0.599,'Msol')
 m2 = IC.settings.physical.M - m1
 
 #Scale the mass of the disk to be some fraction of the star mass
-IC.settings.snapshot.mScale = 0.1
+IC.settings.snapshot.mScale = 0.05
 
 #Define whether the star is a single star or binary
 IC.settings.physical.starMode = 'binary'
@@ -32,7 +32,7 @@ IC.settings.physical.starMode = 'binary'
 #Set binary system parameters.  If single star, comment this out
 #Define list of orbital elements of the following form:
 #X = [e, a [AU], i, Omega, w, nu] where all angles are in degrees
-X = [0.1032, 0.1469, 0.0, 0.0, 0.0, 0.0]
+X = [0.0, 0.1469, 0.0, 0.0, 0.0, 0.0]
 IC.settings.physical.binsys = binary.Binary(X,m1,m2,'kepler')
 
 # Lets generate a disk with powerlaw from [Rin,Rd] au followed by a cutoff
@@ -47,7 +47,7 @@ IC.settings.physical.binsys = binary.Binary(X,m1,m2,'kepler')
 IC.settings.sigma.kind = 'powerlaw'
 IC.settings.sigma.power = -0.5
 IC.settings.sigma.Qmin = 1.5
-IC.settings.sigma.n_points = 100
+IC.settings.sigma.n_points = 1000
 
 IC.settings.sigma.Rd = SimArray(2.0,'au') #Outer edge of powerlaw part of disk
 IC.settings.sigma.rmax = 2.0 #Set rmax 
@@ -60,11 +60,11 @@ IC.settings.pos_gen.method = 'random' #Instead of grid sampling, use random
 IC.save()
 
 # Change the settings used for numerically calculating the gas density
-IC.settings.rho_calc.nr = 100 # Number of radial points to calculate on
-IC.settings.rho_calc.nz = 100 # Number of vertical points to calculate on
+IC.settings.rho_calc.nr = 1000 # Number of radial points to calculate on
+IC.settings.rho_calc.nz = 250 # Number of vertical points to calculate on
 
 # Set the number of gas particles
-IC.settings.pos_gen.nParticles = 10000
+IC.settings.pos_gen.nParticles = 100000
 
 # Set up the temperature profile to use.  Available kinds are 'powerlaw'
 # and 'MQWS'

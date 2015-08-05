@@ -57,9 +57,9 @@ def pToA(period=1, M=1):
 
     Parameters
     ----------
-    Period: float
+    Period : float
         [days]
-    M: float
+    M : float
         COM mass [Msol]
 
     Returns
@@ -79,14 +79,14 @@ def aToP(a=1, M=1):
 
     Parameters
     ----------
-    a: float
+    a : float
         semimajor axis [au]
-    M: float
+    M : float
         mass of system [Msol]
 
     Returns
     -------
-    Period: float
+    Period : float
         [days]
     """
     conv = (AUCM * AUCM * AUCM) / (DAYSEC * DAYSEC * Msol)
