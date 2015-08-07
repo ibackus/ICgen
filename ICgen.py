@@ -25,6 +25,7 @@ import pos_class
 import make_snapshot
 import make_snapshotBinary
 import make_snapshotSType
+import make_snapshotSTypeSupplied
 import ICgen_settings
 import make_sigma
 import sigma_profile
@@ -551,6 +552,8 @@ class maker:
             snapshot, snapshot_param, snapshot_director = make_snapshotBinary.snapshot_gen(self._parent)
         elif self._parent.settings.physical.starMode == "stype":
             snapshot, snapshot_param, snapshot_director = make_snapshotSType.snapshot_gen(self._parent)
+        elif self._parent.settings.physical.starMode == "stypeSupplied":
+            snapshot, snapshot_param, snapshot_director = make_snapshotSTypeSupplied.snapshot_gen(self._parent)
         else:
             print "Invalid starMode given in ICobj.  Assuming default single star."
             snapshot, snapshot_param, snapshot_director = make_snapshot.snapshot_gen(self._parent)
